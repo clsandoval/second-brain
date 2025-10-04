@@ -1,0 +1,191 @@
+{
+  "main": {
+    "id": "05c03ca8e5ce7163",
+    "type": "split",
+    "children": [
+      {
+        "id": "d02efbab54ee8a44",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "490dc1544a46badc",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "tech/onyx.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "onyx"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "194f47d1c636df35",
+    "type": "split",
+    "children": [
+      {
+        "id": "7a3570028dabc926",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ec7e7721a547b8a9",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "89c48993eda6bf0f",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "60fd141359dbe714",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "right": {
+    "id": "f77ba00c2f7c1d3f",
+    "type": "split",
+    "children": [
+      {
+        "id": "ad22779635712312",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a770d19a1a298e74",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "tech/onyx.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for onyx"
+            }
+          },
+          {
+            "id": "d8a124598222e925",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "tech/onyx.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from onyx"
+            }
+          },
+          {
+            "id": "cdd1c2a1fa69bb45",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "0d59d7b8833bf088",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "tech/onyx.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of onyx"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "490dc1544a46badc",
+  "lastOpenFiles": [
+    "concepts/rag-evolution-context-window-era.md",
+    "Untitled.base",
+    "tech/flyio.md",
+    "examples/agentic-rag-workflow.md",
+    "concepts/ab-mcts.md",
+    "examples/treequest.md",
+    "tech/composio.md",
+    "tech/letta.md",
+    "examples/anthropic-context-pattern.md",
+    "concepts/research-agents.md",
+    "tech/onyx.md",
+    "examples/multi-tool-agent.md",
+    "examples/context-compression-pipeline.md",
+    "concepts/context-compression-pruning.md",
+    "concepts/spec-driven-development.md"
+  ]
+}

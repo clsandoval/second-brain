@@ -1,0 +1,27 @@
+# Application name (must be unique across Fly.io)
+app = "radar"
+primary_region = "iad"  # US East (Washington, D.C.)
+
+[build]
+  dockerfile = "infra/fly/site/Dockerfile"
+
+[env]
+  # No environment variables needed for static site
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpus = 1

@@ -1,0 +1,32 @@
+# Node modules (will be installed in container)
+**/node_modules/
+
+# Build outputs (generated during build)
+**/public/
+**/.quartz-cache/
+
+# Git files
+**/.git/
+**/.gitignore
+
+# Development files
+**/.vscode/
+**/.idea/
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Logs
+**/*.log
+**/npm-debug.log*
+
+# Environment files
+**/.env
+**/.env.local
+
+# Obsidian files (don't need in production)
+**/.obsidian/
+
+# Thoughts directory (not needed for deployment)
+thoughts/
