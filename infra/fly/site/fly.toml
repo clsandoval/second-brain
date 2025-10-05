@@ -1,9 +1,9 @@
 # Application name (must be unique across Fly.io)
-app = "radar"
+app = "radar-1759647143-autumn-feather-5278"
 primary_region = "iad"  # US East (Washington, D.C.)
 
 [build]
-  dockerfile = "infra/fly/site/Dockerfile"
+  dockerfile = "Dockerfile"
 
 [env]
   # No environment variables needed for static site

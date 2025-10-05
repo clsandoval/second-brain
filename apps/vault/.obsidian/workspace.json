@@ -20,8 +20,21 @@
               "icon": "lucide-file",
               "title": "onyx"
             }
+          },
+          {
+            "id": "e223421db2355874",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.9.14"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.9.14"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -170,7 +183,7 @@
       "bases:Create new base": false
     }
   },
-  "active": "490dc1544a46badc",
+  "active": "e223421db2355874",
   "lastOpenFiles": [
     "concepts/rag-evolution-context-window-era.md",
     "Untitled.base",

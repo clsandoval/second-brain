@@ -3,6 +3,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Install coreutils for env -S support (needed by Quartz)
+RUN apk add --no-cache coreutils
+
 # Copy package files first for better layer caching
 COPY apps/site/package*.json ./
 RUN npm ci --prefer-offline --no-audit
