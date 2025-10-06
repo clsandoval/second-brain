@@ -2,27 +2,22 @@
 
 ## Overview
 
-Automate the deployment of the Radar site by creating a GitHub Actions workflow that:
-1. Copies content from `apps/vault/` to `apps/site/content/`
-2. Deploys to Fly.io using the existing configuration
+Automate the deployment of the Radar site by creating a GitHub Actions workflow that deploys to Fly.io using the existing configuration. The Dockerfile already handles copying all files including content during the build process.
 
 ## Current State Analysis
 
 ### Existing Infrastructure
-- **Content source**: `apps/vault/` contains the source content (concepts, data, examples, tech, index.md)
-- **Content destination**: `apps/site/content/` is where Quartz builds from
 - **Fly.io config**: `infra/fly/site/fly.toml` (port 80, shared-cpu-1x, 256mb)
 - **Existing workflow**: `apps/site/.github/workflows/fly-deploy.yml:1` (will be replaced/removed)
-- **Dockerfile**: `apps/site/Dockerfile:1` builds Quartz site with content in place
+- **Dockerfile**: `apps/site/Dockerfile:1` copies all files with `COPY . .` including the content directory
 
-### Current Manual Process
-Currently, content is manually copied from `apps/vault/` to `apps/site/content/` before deployment.
+### Current Process
+The Dockerfile uses `COPY . .` which copies everything from the build context (apps/site/) including the content directory. No manual copying is needed in the workflow.
 
 ## Desired End State
 
 A GitHub Actions workflow at `.github/workflows/deploy-site.yml` that:
 - Triggers on push to `main` branch
-- Automatically syncs content from vault to site
 - Deploys to Fly.io with zero manual intervention
 
 ### Verification
@@ -44,9 +39,8 @@ After implementation, pushing to main should:
 
 Create a single-file GitHub Actions workflow at the repository root that:
 1. Checks out the repository
-2. Copies vault content to site content directory (overwriting existing files)
-3. Sets up Fly.io CLI
-4. Deploys using the specified config and context
+2. Sets up Fly.io CLI
+3. Deploys using the specified config and context (Dockerfile handles file copying)
 
 ## Phase 1: Create Root GitHub Actions Directory Structure
 
@@ -102,12 +96,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Sync vault content to site
-        run: |
-          echo "Copying content from apps/vault/ to apps/site/content/"
-          cp -r apps/vault/* apps/site/content/
-          echo "Content sync complete"
-
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
 
@@ -119,11 +107,11 @@ jobs:
 ```
 
 **Key design decisions:**
-- **Content sync**: Uses `cp -r` to recursively copy and overwrite files
 - **Working directory**: Changes to `apps/site` for deployment context
 - **Fly config path**: Relative path from apps/site to infra/fly/site/fly.toml
 - **Concurrency**: Prevents simultaneous deployments
 - **Secrets**: Reuses existing `FLY_API_TOKEN` secret
+- **No content sync**: Dockerfile's `COPY . .` handles all file copying during build
 
 ### Success Criteria
 
@@ -152,9 +140,9 @@ Verify the workflow executes successfully and deploys the site.
 5. Visit the deployed site to confirm content is live
 
 #### Edge Cases to Test:
-- Content with special characters or spaces in filenames
-- Large content files (should deploy successfully)
 - Rapid successive pushes (concurrency control should queue)
+- Changes to fly.toml configuration
+- Large builds (should complete within timeout)
 
 ### Success Criteria
 
@@ -165,8 +153,7 @@ Verify the workflow executes successfully and deploys the site.
 
 #### Manual Verification:
 - [ ] Deployed site is accessible at Fly.io URL
-- [ ] Content from apps/vault/ is visible on the site
-- [ ] No missing or broken content
+- [ ] Content is visible on the site
 - [ ] Site loads within reasonable time (< 5 seconds)
 - [ ] Subsequent pushes trigger new deployments correctly
 
@@ -190,7 +177,7 @@ The workflow requires the `FLY_API_TOKEN` secret to be set in GitHub repository 
 To verify: **Settings → Secrets and variables → Actions → Repository secrets**
 
 ### First Deployment
-The first workflow run will sync the current state of `apps/vault/` to the site. Ensure vault content is in the desired state before merging this workflow.
+The first workflow run will deploy the current state of the repository. Ensure all content in `apps/site/content/` is in the desired state before merging this workflow.
 
 ## Performance Considerations
 
