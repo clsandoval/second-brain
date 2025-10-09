@@ -7,6 +7,12 @@ You are tasked with creating a comprehensive vault note plan through an interact
 When this command is invoked:
 
 1. **Check if parameters were provided**:
+   - If a YouTube URL was provided as a parameter:
+     - Use `bashscripts/download-transcript.sh` to download the transcript
+     - Save transcript to a temporary location
+     - Read the downloaded transcript file
+     - Use the transcript content as primary research material
+     - Extract the video topic from the transcript or video title
    - If a topic or file path was provided as a parameter, skip the default message
    - Immediately begin the research process
 
@@ -18,10 +24,13 @@ Please provide:
 - The topic or concept you want documented
 - Any specific aspects, relationships, or sources to explore
 - Links to related research, documentation, or existing notes
+- YouTube URLs (transcripts will be automatically downloaded and analyzed)
 
 I'll research the topic thoroughly and create a comprehensive plan document outlining what notes should be created and what they should contain.
 
-Tip: You can invoke this command with a topic directly: `/plan_vault_note Context Windows in LLMs`
+Tips:
+- You can invoke this command with a topic directly: `/plan_vault_note Context Windows in LLMs`
+- You can provide a YouTube URL: `/plan_vault_note https://www.youtube.com/watch?v=VIDEO_ID`
 ```
 
 Then wait for the user's input.
