@@ -1,71 +1,119 @@
 ---
-title: Email Automation with Claude Agent SDK and Composio
+title: Business Automation with Claude Agent SDK and Composio
 type: example
-tags: [agent, claude-agent-sdk, composio, email, automation, hooks, subagents, mcp, tool-orchestration]
+tags: [agent, claude-agent-sdk, composio, automation, hooks, subagents, mcp, tool-orchestration, shopify, hubspot, contracts, spreadsheets, calendar]
 created: 2025-10-10
 updated: 2025-10-10
 ---
 
-# Email Automation with Claude Agent SDK and Composio
+# Business Automation with Claude Agent SDK and Composio
 
 ## Overview
 
-This example demonstrates building an autonomous email automation agent using [[claude-agent-sdk]] integrated with [[composio]] tools. The pattern replaces rigid multi-phase orchestration with Claude's flexible agent loop, enabling dynamic tool selection, parallel processing, and intelligent iteration.
+This example demonstrates building autonomous business process automation agents using [[claude-agent-sdk]] integrated with [[composio]] tools. The pattern replaces rigid multi-phase orchestration with Claude's flexible agent loop, enabling dynamic tool selection, parallel processing, and intelligent iteration.
 
-**Key Innovation**: Combining Claude SDK's autonomous agent capabilities with Composio's 250+ authenticated tools to create an email assistant that handles irregular, non-standard requests better than fixed workflow approaches.
+**Key Innovation**: Combining Claude SDK's autonomous agent capabilities with Composio's 250+ authenticated tools to create business automation workflows that handle irregular, criteria-driven tasks better than fixed workflow approaches.
 
-**Use Case**: "Downstream" email automation where tasks are less regular - drafting responses, deciding which tools to call, coordinating across multiple systems (Gmail, Calendar, Slack, Notion, HubSpot, etc.).
+**Use Cases**:
+- **Spreadsheet Updates**: Monitor email threads and update Google Sheets with extracted data
+- **Contract Generation**: Generate contracts when specific criteria are met in email threads
+- **E-commerce Operations**: Create Shopify discount codes and draft orders based on thread criteria
+- **Calendar Management**: Check schedules, send invites, coordinate meetings
+- **CRM Updates**: Automatically update HubSpot based on email interactions
 
 **Technologies:**
 - **[[claude-agent-sdk]]**: Autonomous agent framework with built-in loop, hooks, subagents
-- **[[composio]]**: Tool integration platform providing authenticated access to Gmail, Calendar, etc.
+- **[[composio]]**: Tool integration platform providing authenticated access to Shopify, HubSpot, Google Sheets, Calendar, etc.
 - **[[model-context-protocol|MCP]]**: In-process MCP servers for custom tools
 - **Python asyncio**: Async execution for parallel subagent processing
 
+## The Simple Approach
+
+**No hardcoded workflow logic!** Just three things:
+
+1. **Define workflows** - prompts describing what to do + tool whitelists:
+   ```python
+   WORKFLOWS = {
+       "contract_generation": WorkflowConfig(
+           prompt="Generate contract when criteria met...",
+           allowed_tools=["HUBSPOT_*", "GOOGLESHEETS_*", ...]
+       )
+   }
+   ```
+
+2. **Classify** - which workflows apply to this thread?
+   ```python
+   workflows = await classify_workflows(thread)
+   # Returns: ["contract_generation", "crm_update"]
+   ```
+
+3. **Execute** - let Claude Agent SDK handle everything:
+   ```python
+   result = await run_workflows(thread, context, settings)
+   # Claude figures out: tool orchestration, parallel execution,
+   # error handling, when to stop - EVERYTHING
+   ```
+
+That's it! No `if workflow_type == "contract"` logic. No hardcoded orchestration. Claude does it all.
+
 ## Architecture
 
+**Key Principle**: **NO HARDCODED WORKFLOW LOGIC**
+
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    CLAUDE AGENT SDK ORCHESTRATION                    │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-                    ┌───────────────────────────┐
-                    │   Main Orchestrator Agent  │
-                    │   (ClaudeSDKClient)        │
-                    └───────────┬───────────────┘
-                                │
-                    Automatic Agent Loop (gather-action-verify-repeat)
-                                │
-                ┌───────────────┼───────────────┐
-                │               │               │
-                ▼               ▼               ▼
-        ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-        │   Calendar   │  │    Email     │  │   Research   │
-        │   Subagent   │  │  Subagent    │  │  Subagent    │
-        │  (parallel)  │  │  (parallel)  │  │  (parallel)  │
-        └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
-               │                 │                  │
-               ▼                 ▼                  ▼
-      ┌────────────────────────────────────────────────────┐
-      │            TOOL EXECUTION LAYER                     │
-      ├────────────────────────────────────────────────────┤
-      │  Composio Tools    │  Custom Tools  │  Native Tools│
-      │  - Gmail           │  - Business    │  - WebSearch │
-      │  - Calendar        │    Logic       │  - Read/Write│
-      │  - Slack           │  - Templates   │  - Bash      │
-      │  - Notion          │  - Validation  │              │
-      └────────────────────────────────────────────────────┘
-                                │
-                                ▼
-                    ┌───────────────────────────┐
-                    │    HOOKS & VALIDATION      │
-                    ├───────────────────────────┤
-                    │  PreToolUse: Safety checks │
-                    │  PostToolUse: Quality validation│
-                    │  Deterministic (no LLM)   │
-                    └───────────────────────────┘
+Email Thread
+      │
+      ▼
+┌─────────────────────────┐
+│  Workflow Classifier     │  ← Simple LLM call: which workflows apply?
+│  (1 LLM call)           │
+└───────────┬─────────────┘
+            │
+            ▼
+    [contract_generation, crm_update]  ← Workflow names
+            │
+            ▼
+┌─────────────────────────┐
+│  Collect Tools          │  ← Merge allowed_tools from workflows
+│  & Build Prompt         │  ← Combine workflow prompts
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────┐
+│           Claude Agent SDK (ClaudeSDKClient)            │
+│                                                         │
+│  system_prompt: "Execute: contract_generation,          │
+│                  crm_update. Work autonomously."        │
+│                                                         │
+│  allowed_tools: [HUBSPOT_*, GOOGLESHEETS_*,            │
+│                  mcp__business_custom__*, ...]         │
+│                                                         │
+│  → Agent figures out EVERYTHING:                        │
+│    - Which tools to call                                │
+│    - In what order                                      │
+│    - Parallel execution                                 │
+│    - Error handling                                     │
+│    - When to stop                                       │
+└───────────────────────┬─────────────────────────────────┘
+                        │
+                        ▼
+            ┌───────────────────────┐
+            │  Hooks (validation)   │  ← Only for safety checks
+            └───────────────────────┘
+                        │
+                        ▼
+            ┌───────────────────────┐
+            │  Composio + MCP Tools │
+            └───────────────────────┘
 ```
+
+**What you configure:**
+1. **Workflow definitions** (`WORKFLOWS` dict) - just prompts + tool whitelists
+2. **Custom tools** (MCP) - business logic like contract generation
+3. **Hooks** (optional) - safety validations
+
+**What Claude Agent SDK handles:**
+- Everything else! Tool orchestration, parallel execution, error recovery, iteration
 
 ### Agent Flow
 
@@ -90,126 +138,149 @@ Initial Query → [Autonomous Agent Loop with Hooks] → Final Output
 
 ## Core Components
 
-### 1. Main Orchestrator Agent
+### 1. Workflow Configuration
 
-The primary agent that handles email automation end-to-end:
+Define workflows as simple configs with prompts and tool whitelists:
 
 ```python
-from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions
-from composio import Composio
-import os
+from dataclasses import dataclass
+from typing import List, Dict
 
-async def create_email_orchestrator(user_id: str, toolkit_rules: dict):
-    """
-    Create main orchestrator agent with Composio integration
+@dataclass
+class WorkflowConfig:
+    """Configuration for a business automation workflow"""
+    name: str
+    description: str  # For classifier
+    prompt: str  # Instructions for the agent
+    allowed_tools: List[str]  # Whitelisted tools
+    priority: int = 0  # For handling multiple matching workflows
 
-    Args:
-        user_id: User's email for Composio authentication
-        toolkit_rules: Rules for tool usage and business logic
-    """
+# Define all available workflows
+WORKFLOWS = {
+    "contract_generation": WorkflowConfig(
+        name="contract_generation",
+        description="Generate contracts when pricing, scope, timeline, and payment terms are all confirmed in thread",
+        prompt="""Generate a contract from the email thread.
 
-    # Fetch authenticated Composio tools for this user
-    composio = Composio(api_key=os.getenv("COMPOSIO_API_KEY"))
-    composio_tools = composio.tools.get(
-        user_id=user_id,
-        toolkits=["gmail", "googlecalendar", "slack", "notion"],
-        limit=100
+Steps:
+1. Validate ALL criteria are met:
+   - Pricing confirmed by both parties
+   - Scope of work clearly defined
+   - Timeline/dates established
+   - Payment terms agreed upon
+2. If ANY criteria missing, list what's needed and STOP
+3. If all criteria met:
+   - Extract contract data from thread
+   - Generate contract using template
+   - Update HubSpot: create/update contact, create deal (stage: Proposal Sent)
+   - Log to Google Sheets audit trail
+   - If kickoff meeting mentioned, schedule it
+
+Do NOT generate contracts with incomplete information.""",
+        allowed_tools=[
+            "HUBSPOT_CREATE_CONTACT", "HUBSPOT_UPDATE_CONTACT",
+            "HUBSPOT_CREATE_DEAL", "HUBSPOT_UPDATE_DEAL", "HUBSPOT_CREATE_NOTE",
+            "GOOGLESHEETS_APPEND_VALUES", "GOOGLESHEETS_GET_VALUES",
+            "GOOGLECALENDAR_CREATE_EVENT", "GOOGLECALENDAR_SEND_INVITE",
+            "mcp__business_custom__check_contract_criteria",
+            "mcp__business_custom__generate_contract",
+            "mcp__business_custom__extract_thread_data",
+            "Read", "Write"
+        ]
+    ),
+
+    "shopify_order": WorkflowConfig(
+        name="shopify_order",
+        description="Create Shopify discount codes and draft orders when customer requests products with pricing",
+        prompt="""Process Shopify order from email thread.
+
+Steps:
+1. Extract order details: customer email, products, quantities, pricing
+2. Validate customer eligibility for discount (if mentioned)
+3. If eligible, create discount code (max 50% without approval)
+4. Create draft order with products and pricing
+5. Apply discount if created
+6. Log order to tracking spreadsheet
+7. Update HubSpot contact with order note
+
+Validation:
+- Customer email required
+- At least 1 product required
+- Order total under $10k (otherwise flag for approval)""",
+        allowed_tools=[
+            "SHOPIFY_CREATE_DISCOUNT_CODE", "SHOPIFY_CREATE_DRAFT_ORDER",
+            "SHOPIFY_GET_CUSTOMER", "SHOPIFY_UPDATE_ORDER",
+            "HUBSPOT_UPDATE_CONTACT", "HUBSPOT_CREATE_NOTE",
+            "GOOGLESHEETS_APPEND_VALUES",
+            "mcp__business_custom__validate_discount_eligibility",
+            "mcp__business_custom__extract_thread_data"
+        ]
+    ),
+
+    "spreadsheet_update": WorkflowConfig(
+        name="spreadsheet_update",
+        description="Extract structured data from threads and update Google Sheets tracking",
+        prompt="""Extract data from email thread and update spreadsheet.
+
+Steps:
+1. Identify what business data needs tracking
+2. Extract structured data from unstructured thread
+3. Validate extracted data completeness
+4. Append or update appropriate spreadsheet
+5. Verify write succeeded
+
+Handle missing data gracefully. Use proper formatting (dates, currency, percentages).""",
+        allowed_tools=[
+            "GOOGLESHEETS_UPDATE_VALUES", "GOOGLESHEETS_APPEND_VALUES",
+            "GOOGLESHEETS_GET_VALUES",
+            "mcp__business_custom__extract_thread_data"
+        ]
+    ),
+
+    "crm_update": WorkflowConfig(
+        name="crm_update",
+        description="Update HubSpot CRM with contact info, deals, and notes from email threads",
+        prompt="""Update HubSpot CRM based on email thread.
+
+Steps:
+1. Extract contact/lead information from thread
+2. Check if contact already exists (search by email)
+3. If exists: UPDATE contact with new info
+4. If not: CREATE contact
+5. If deal/opportunity mentioned: create or update deal
+6. Add detailed note with thread context
+7. Set appropriate deal stage based on conversation
+
+Always check for existing records first. Link deals to contacts.""",
+        allowed_tools=[
+            "HUBSPOT_CREATE_CONTACT", "HUBSPOT_UPDATE_CONTACT",
+            "HUBSPOT_CREATE_DEAL", "HUBSPOT_UPDATE_DEAL",
+            "HUBSPOT_CREATE_NOTE", "HUBSPOT_SEARCH_CONTACTS",
+            "mcp__business_custom__extract_thread_data"
+        ]
+    ),
+
+    "calendar_coordination": WorkflowConfig(
+        name="calendar_coordination",
+        description="Schedule meetings and send calendar invites when meeting discussed in thread",
+        prompt="""Coordinate calendar based on email thread.
+
+Steps:
+1. Extract meeting requirements: duration, attendees, topic, time preferences
+2. Check calendar availability for proposed times
+3. Find 2-3 optimal time slots (respect working hours 9am-5pm)
+4. Create calendar event with proper details
+5. Add Google Meet link
+6. Send invites ONLY when all parties have confirmed
+
+Include agenda from thread in event description.""",
+        allowed_tools=[
+            "GOOGLECALENDAR_FIND_FREE_TIME", "GOOGLECALENDAR_CREATE_EVENT",
+            "GOOGLECALENDAR_SEND_INVITE", "GOOGLECALENDAR_LIST_EVENTS",
+            "mcp__business_custom__extract_thread_data"
+        ]
     )
-
-    # Filter to whitelisted tools for security
-    allowed_tool_names = [
-        "GMAIL_CREATE_DRAFT",
-        "GMAIL_SEND_EMAIL",
-        "GMAIL_SEARCH",
-        "GOOGLECALENDAR_FIND_FREE_TIME",
-        "GOOGLECALENDAR_CREATE_EVENT",
-        "SLACK_SEND_MESSAGE",
-        "NOTION_CREATE_PAGE"
-    ]
-
-    options = ClaudeAgentOptions(
-        system_prompt=f"""You are an autonomous email automation assistant for Cheerful.
-
-Your role:
-- Analyze incoming emails and determine appropriate actions
-- Draft professional, context-aware responses
-- Coordinate across multiple systems (email, calendar, slack, notion)
-- Handle irregular, non-standard requests intelligently
-- Work autonomously until tasks are complete
-
-Business Rules:
-{format_rules(toolkit_rules)}
-
-Key Principles:
-1. Always draft emails before sending (create draft first, verify, then send)
-2. Check calendar availability before proposing meeting times
-3. Match the sender's tone and communication style
-4. Include all necessary context from email thread history
-5. When uncertain, research relevant information before responding
-6. Coordinate parallel actions when possible (e.g., draft email while checking calendar)
-
-You have access to:
-- Gmail: drafting, sending, searching emails
-- Google Calendar: checking availability, creating events
-- Slack: sending notifications to team
-- Notion: creating documentation/notes
-- Web search: researching topics mentioned in emails
-- File system: reading templates, saving drafts
-
-Always complete the full workflow. Don't stop until:
-- Email response is sent OR draft is ready for review
-- Any required calendar events are created
-- All necessary follow-up actions are completed""",
-
-        allowed_tools=allowed_tool_names + ["Read", "Write", "WebSearch"],
-
-        # Accept email drafts automatically, but require approval for sends
-        permission_mode='acceptEdits',
-
-        # Allow up to 20 iterations for complex cases
-        max_turns=20,
-
-        # Hooks for validation and monitoring
-        hooks={
-            "PreToolUse": [
-                HookMatcher(
-                    tool_names=["GMAIL_SEND_EMAIL"],
-                    handler=validate_email_before_send
-                ),
-                HookMatcher(
-                    tool_names=["GOOGLECALENDAR_CREATE_EVENT"],
-                    handler=validate_calendar_event
-                )
-            ],
-            "PostToolUse": [
-                HookMatcher(
-                    handler=track_tool_usage
-                ),
-                HookMatcher(
-                    tool_names=["GMAIL_CREATE_DRAFT"],
-                    handler=validate_draft_quality
-                )
-            ]
-        },
-
-        # Working directory for templates and drafts
-        cwd=f"/app/workspace/{user_id}",
-
-        # MCP servers for custom tools
-        mcp_servers={
-            "cheerful_custom": create_custom_tools_mcp_server()
-        }
-    )
-
-    return ClaudeSDKClient(options=options)
-
-
-def format_rules(toolkit_rules: dict) -> str:
-    """Format business rules for system prompt"""
-    rules_text = []
-    for toolkit, rule in toolkit_rules.items():
-        rules_text.append(f"- {toolkit}: {rule}")
-    return "\n".join(rules_text)
+}
 ```
 
 ### 2. Custom Tools via In-Process MCP
@@ -218,98 +289,252 @@ Extend capabilities beyond Composio with custom business logic:
 
 ```python
 from claude_agent_sdk import tool, create_sdk_mcp_server
+from datetime import datetime
+import json
 
 @tool(
-    "analyze_email_intent",
-    "Extract intent and key information from email thread",
-    {"thread_context": dict, "email_content": dict}
+    "check_contract_criteria",
+    "Validate if email thread meets criteria for contract generation",
+    {"thread_context": dict, "required_criteria": list}
 )
-async def analyze_email_intent(args):
+async def check_contract_criteria(args):
     """
-    Custom analysis tool for understanding email context
+    Check if thread contains all required information for contract generation
 
-    Returns structured data about email intent, urgency, key entities
+    Required criteria examples:
+    - Both parties agreed to terms
+    - Pricing confirmed
+    - Scope of work defined
+    - Timeline established
+    - Payment terms discussed
     """
     thread = args['thread_context']
-    email = args['email_content']
+    required = args['required_criteria']
 
-    # Your custom business logic here
-    intent = extract_intent(email['body'])
-    entities = extract_entities(email['body'])
-    urgency = calculate_urgency(thread, email)
+    # Extract confirmations from thread
+    confirmations = extract_confirmations(thread)
+    met_criteria = []
+    missing_criteria = []
 
-    return {
-        "content": [{
-            "type": "text",
-            "text": f"""Email Analysis:
-Intent: {intent['primary']} (confidence: {intent['confidence']})
-Key Entities: {', '.join(entities)}
-Urgency: {urgency}/10
-Requires Tools: {suggest_tools(intent, entities)}"""
-        }]
-    }
+    for criterion in required:
+        if criterion_met(criterion, confirmations, thread):
+            met_criteria.append(criterion)
+        else:
+            missing_criteria.append(criterion)
 
-
-@tool(
-    "load_email_template",
-    "Load pre-approved email template by name",
-    {"template_name": str, "variables": dict}
-)
-async def load_email_template(args):
-    """Load and populate email template"""
-    template = await get_template(args['template_name'])
-    populated = template.format(**args.get('variables', {}))
+    criteria_met = len(missing_criteria) == 0
 
     return {
         "content": [{
             "type": "text",
-            "text": populated
-        }]
-    }
+            "text": f"""Contract Criteria Check:
+Status: {'✅ All criteria met - ready for contract generation' if criteria_met else '❌ Missing required criteria'}
 
+Met Criteria ({len(met_criteria)}):
+{format_list(met_criteria)}
 
-@tool(
-    "check_compliance",
-    "Verify email draft meets compliance requirements",
-    {"draft_content": str, "recipient_domain": str}
-)
-async def check_compliance(args):
-    """Compliance validation for email drafts"""
-    draft = args['draft_content']
-    domain = args['recipient_domain']
+Missing Criteria ({len(missing_criteria)}):
+{format_list(missing_criteria) if missing_criteria else 'None'}
 
-    # Check for:
-    # - Required disclaimers
-    # - Prohibited content
-    # - Domain-specific rules
-
-    issues = validate_compliance(draft, domain)
-
-    if issues:
-        return {
-            "content": [{
-                "type": "text",
-                "text": f"Compliance issues found:\n" + "\n".join(issues)
-            }]
+Can generate contract: {criteria_met}"""
+        }],
+        "metadata": {
+            "criteria_met": criteria_met,
+            "missing_count": len(missing_criteria)
         }
+    }
+
+
+@tool(
+    "generate_contract",
+    "Generate contract from template based on thread data",
+    {"thread_data": dict, "contract_type": str, "template_name": str}
+)
+async def generate_contract(args):
+    """
+    Generate contract document from approved template
+
+    Extracts terms, parties, pricing from thread and populates template
+    """
+    thread_data = args['thread_data']
+    contract_type = args['contract_type']
+    template_name = args['template_name']
+
+    # Load contract template
+    template = await load_contract_template(template_name)
+
+    # Extract contract data from thread
+    contract_data = {
+        "client_name": extract_client_name(thread_data),
+        "client_email": extract_client_email(thread_data),
+        "service_description": extract_scope(thread_data),
+        "total_amount": extract_pricing(thread_data),
+        "payment_terms": extract_payment_terms(thread_data),
+        "start_date": extract_start_date(thread_data),
+        "end_date": extract_end_date(thread_data),
+        "contract_date": datetime.now().strftime("%Y-%m-%d"),
+        "contract_number": generate_contract_number()
+    }
+
+    # Generate contract document
+    contract_content = template.format(**contract_data)
+
+    # Save to file
+    filename = f"contract_{contract_data['contract_number']}_{contract_data['client_name']}.pdf"
+    file_path = await save_contract_pdf(contract_content, filename)
 
     return {
         "content": [{
             "type": "text",
-            "text": "Draft passes all compliance checks"
-        }]
+            "text": f"""Contract Generated Successfully:
+
+Contract Type: {contract_type}
+Contract Number: {contract_data['contract_number']}
+Client: {contract_data['client_name']}
+Amount: ${contract_data['total_amount']}
+File: {file_path}
+
+Next steps:
+1. Review contract for accuracy
+2. Send to client for signature
+3. Update CRM with contract details"""
+        }],
+        "metadata": {
+            "contract_number": contract_data['contract_number'],
+            "file_path": file_path,
+            "contract_data": contract_data
+        }
     }
 
 
-def create_custom_tools_mcp_server():
-    """Create in-process MCP server with custom tools"""
+@tool(
+    "extract_thread_data",
+    "Extract structured business data from email thread",
+    {"thread": dict, "data_schema": dict}
+)
+async def extract_thread_data(args):
+    """
+    Extract structured data from unstructured email thread
+
+    Supports schemas for:
+    - Order information (products, quantities, pricing)
+    - Meeting details (date, time, attendees, agenda)
+    - Customer information (name, company, contact details)
+    - Deal information (stage, value, close date)
+    """
+    thread = args['thread']
+    schema = args['data_schema']
+
+    # Use LLM to extract structured data
+    extracted_data = {}
+
+    for field_name, field_config in schema.items():
+        field_type = field_config.get('type')
+        required = field_config.get('required', False)
+
+        value = extract_field_from_thread(
+            thread=thread,
+            field_name=field_name,
+            field_type=field_type
+        )
+
+        if value is not None:
+            extracted_data[field_name] = value
+        elif required:
+            extracted_data[field_name] = None  # Mark as missing
+
+    # Validate extracted data
+    validation_result = validate_extracted_data(extracted_data, schema)
+
+    return {
+        "content": [{
+            "type": "text",
+            "text": f"""Data Extraction Complete:
+
+{format_extracted_data(extracted_data)}
+
+Validation: {validation_result['status']}
+{format_validation_issues(validation_result.get('issues', []))}"""
+        }],
+        "metadata": {
+            "extracted_data": extracted_data,
+            "validation": validation_result
+        }
+    }
+
+
+@tool(
+    "validate_discount_eligibility",
+    "Check if customer is eligible for discount based on business rules",
+    {"customer_email": str, "discount_type": str, "order_value": float}
+)
+async def validate_discount_eligibility(args):
+    """
+    Validate discount eligibility based on:
+    - Customer purchase history
+    - Order value thresholds
+    - Current promotions
+    - Customer tier/status
+    """
+    customer_email = args['customer_email']
+    discount_type = args['discount_type']
+    order_value = args['order_value']
+
+    # Check customer history (would integrate with actual DB)
+    customer_history = get_customer_history(customer_email)
+
+    # Apply business rules
+    eligibility_checks = {
+        "is_returning_customer": customer_history['order_count'] > 0,
+        "meets_minimum_order": order_value >= get_minimum_order_value(discount_type),
+        "not_recently_used": not has_recent_discount(customer_email, days=30),
+        "customer_tier_eligible": customer_history['tier'] in get_eligible_tiers(discount_type)
+    }
+
+    eligible = all(eligibility_checks.values())
+
+    if eligible:
+        discount_amount = calculate_discount_amount(discount_type, order_value)
+        discount_code = generate_discount_code(customer_email, discount_type)
+    else:
+        discount_amount = 0
+        discount_code = None
+
+    return {
+        "content": [{
+            "type": "text",
+            "text": f"""Discount Eligibility Check:
+
+Customer: {customer_email}
+Discount Type: {discount_type}
+Order Value: ${order_value:.2f}
+
+Eligibility: {'✅ Eligible' if eligible else '❌ Not Eligible'}
+
+Checks:
+{format_checks(eligibility_checks)}
+
+{f'Discount Code: {discount_code}' if discount_code else ''}
+{f'Discount Amount: ${discount_amount:.2f}' if discount_amount else ''}"""
+        }],
+        "metadata": {
+            "eligible": eligible,
+            "discount_code": discount_code,
+            "discount_amount": discount_amount
+        }
+    }
+
+
+def create_custom_business_tools_mcp_server():
+    """Create in-process MCP server with custom business tools"""
     return create_sdk_mcp_server(
-        name="cheerful-custom-tools",
+        name="business-custom-tools",
         version="1.0.0",
         tools=[
-            analyze_email_intent,
-            load_email_template,
-            check_compliance
+            check_contract_criteria,
+            generate_contract,
+            extract_thread_data,
+            validate_discount_eligibility
         ]
     )
 ```
@@ -319,558 +544,485 @@ def create_custom_tools_mcp_server():
 Replace LLM-based validation with fast, deterministic checks:
 
 ```python
-def validate_email_before_send(hook_context):
+from datetime import datetime
+
+def validate_shopify_operation(hook_context):
     """
-    PreToolUse hook: Validate before sending email
+    PreToolUse hook: Validate Shopify operations before execution
 
     Checks:
-    - Draft was created and reviewed
-    - Compliance validation passed
-    - Recipient is valid
-    - No sensitive data exposed
+    - Discount codes meet business rules
+    - Draft orders have required fields
+    - Order values are within limits
+    - Customer exists in system
 
     Returns: {"allow": True/False, "reason": str}
     """
     tool_input = hook_context.tool_input
+    tool_name = hook_context.tool_name
 
-    # Extract email details
-    draft_id = tool_input.get('draft_id')
-    to_address = tool_input.get('to')
+    if tool_name == "SHOPIFY_CREATE_DISCOUNT_CODE":
+        # Check 1: Discount percentage within limits
+        discount_value = tool_input.get('value', 0)
+        max_discount = 50  # 50% max
 
-    # Check 1: Draft exists
-    if not draft_id:
-        return {
-            "deny": True,
-            "reason": "Must create draft before sending"
-        }
+        if discount_value > max_discount:
+            return {
+                "deny": True,
+                "reason": f"Discount {discount_value}% exceeds maximum {max_discount}%"
+            }
 
-    # Check 2: Recipient is valid
-    if not is_valid_recipient(to_address):
-        return {
-            "deny": True,
-            "reason": f"Invalid recipient: {to_address}"
-        }
+        # Check 2: Eligibility was verified
+        if not hook_context.custom_data.get('eligibility_checked'):
+            return {
+                "deny": True,
+                "reason": "Must validate discount eligibility first"
+            }
 
-    # Check 3: Compliance (from custom data passed through context)
-    if not hook_context.custom_data.get('compliance_checked'):
-        return {
-            "deny": True,
-            "reason": "Compliance check required before sending"
-        }
+    elif tool_name == "SHOPIFY_CREATE_DRAFT_ORDER":
+        # Check 1: Order has items
+        line_items = tool_input.get('line_items', [])
+        if not line_items:
+            return {
+                "deny": True,
+                "reason": "Draft order must have at least one item"
+            }
 
-    # All checks pass
+        # Check 2: Customer email provided
+        customer_email = tool_input.get('customer', {}).get('email')
+        if not customer_email:
+            return {
+                "deny": True,
+                "reason": "Customer email required for draft order"
+            }
+
+        # Check 3: Total value within limits
+        total = sum(item.get('price', 0) * item.get('quantity', 1) for item in line_items)
+        if total > 10000:  # $10k limit
+            return {
+                "deny": True,
+                "reason": f"Order total ${total:.2f} exceeds $10,000 limit. Requires manual approval."
+            }
+
     return {"allow": True}
 
 
-def validate_calendar_event(hook_context):
+def validate_crm_operation(hook_context):
     """
-    PreToolUse hook: Validate calendar event before creation
+    PreToolUse hook: Validate HubSpot CRM operations
 
     Checks:
-    - Time is within working hours
-    - No double-booking
-    - Duration is reasonable
+    - Required fields present
+    - Deal values are realistic
+    - No duplicate contacts
+    - Valid pipeline stages
+    """
+    tool_input = hook_context.tool_input
+    tool_name = hook_context.tool_name
+
+    if tool_name == "HUBSPOT_CREATE_DEAL":
+        # Check 1: Required fields
+        required_fields = ['dealname', 'amount', 'dealstage', 'pipeline']
+        missing_fields = [f for f in required_fields if f not in tool_input.get('properties', {})]
+
+        if missing_fields:
+            return {
+                "deny": True,
+                "reason": f"Missing required fields: {', '.join(missing_fields)}"
+            }
+
+        # Check 2: Deal amount is reasonable
+        amount = tool_input.get('properties', {}).get('amount', 0)
+        if amount > 1000000:  # $1M limit
+            return {
+                "deny": True,
+                "reason": f"Deal amount ${amount:,.0f} exceeds $1M limit. Requires manual review."
+            }
+
+        # Check 3: Valid pipeline stage
+        stage = tool_input.get('properties', {}).get('dealstage')
+        valid_stages = get_valid_deal_stages()
+        if stage not in valid_stages:
+            return {
+                "deny": True,
+                "reason": f"Invalid deal stage: {stage}"
+            }
+
+    elif tool_name == "HUBSPOT_CREATE_CONTACT":
+        # Check for duplicate
+        email = tool_input.get('properties', {}).get('email')
+        if email and contact_exists(email):
+            return {
+                "deny": True,
+                "reason": f"Contact already exists: {email}. Use UPDATE instead of CREATE."
+            }
+
+    return {"allow": True}
+
+
+def validate_calendar_invite(hook_context):
+    """
+    PreToolUse hook: Validate calendar invite before sending
+
+    Checks:
+    - Event was created first
+    - All parties confirmed availability
+    - Meeting has required details (time, attendees, agenda)
     """
     tool_input = hook_context.tool_input
 
-    start_time = parse_datetime(tool_input.get('start_time'))
-    duration = tool_input.get('duration', 0)
-
-    # Check 1: Working hours
-    if not is_within_working_hours(start_time):
+    # Check 1: Event exists
+    event_id = tool_input.get('event_id')
+    if not event_id:
         return {
             "deny": True,
-            "reason": "Event must be during working hours (9am-5pm)"
+            "reason": "Must create calendar event before sending invites"
         }
 
-    # Check 2: Reasonable duration
-    if duration > 240:  # 4 hours
+    # Check 2: Attendees confirmed
+    if not hook_context.custom_data.get('attendees_confirmed'):
         return {
             "deny": True,
-            "reason": "Event duration too long (max 4 hours)"
+            "reason": "Wait for attendee confirmation before sending calendar invites"
         }
 
-    # Check 3: No conflicts (would require calendar API call)
-    # For demo, assume we have this data in context
-    if hook_context.custom_data.get('has_conflict'):
+    # Check 3: Has required details
+    event_details = tool_input.get('event_details', {})
+    if not event_details.get('summary'):
         return {
             "deny": True,
-            "reason": "Calendar conflict detected"
+            "reason": "Event must have a title/summary"
         }
 
     return {"allow": True}
 
 
-def validate_draft_quality(hook_context):
+def validate_sheet_update(hook_context):
     """
-    PostToolUse hook: Validate email draft quality after creation
+    PostToolUse hook: Validate Google Sheets update after execution
 
     Checks:
-    - Minimum length
-    - Has proper greeting/closing
-    - No obvious errors
+    - Data was actually written
+    - Format is correct
+    - No data loss occurred
     """
     tool_output = hook_context.tool_output
 
-    # Extract draft content from tool result
-    draft_content = extract_draft_content(tool_output)
+    # Extract update result
+    updated_range = tool_output.get('updatedRange')
+    updated_rows = tool_output.get('updatedRows', 0)
 
-    # Quality checks
-    issues = []
-
-    if len(draft_content) < 50:
-        issues.append("Draft too short (min 50 characters)")
-
-    if not has_greeting(draft_content):
-        issues.append("Missing greeting")
-
-    if not has_closing(draft_content):
-        issues.append("Missing closing/signature")
-
-    if has_obvious_errors(draft_content):
-        issues.append("Potential errors detected")
-
-    if issues:
-        # Trigger retry by marking as failed
+    # Check 1: Data was written
+    if updated_rows == 0:
         return {
             "retry": True,
-            "reason": "Draft quality issues: " + "; ".join(issues)
+            "reason": "No rows were updated. Retrying..."
         }
+
+    # Check 2: Expected range
+    expected_rows = hook_context.custom_data.get('expected_row_count')
+    if expected_rows and updated_rows != expected_rows:
+        return {
+            "retry": True,
+            "reason": f"Expected {expected_rows} rows, but updated {updated_rows}"
+        }
+
+    # Log successful update
+    log_audit_trail(
+        action="sheet_update",
+        range=updated_range,
+        rows=updated_rows,
+        timestamp=datetime.now()
+    )
 
     return {"allow": True}
 
 
 def track_tool_usage(hook_context):
     """
-    PostToolUse hook: Track all tool usage for monitoring
+    PostToolUse hook: Track all tool usage for monitoring and audit
     """
     # Log to your monitoring system
     log_tool_call(
         tool_name=hook_context.tool_name,
         user_id=hook_context.custom_data.get('user_id'),
         success=not hook_context.error,
-        timestamp=datetime.now()
+        timestamp=datetime.now(),
+        tool_input=hook_context.tool_input,
+        tool_output=hook_context.tool_output if not hook_context.error else None
     )
+
+    # Track costs for Composio tool calls
+    if hook_context.tool_name.startswith(("SHOPIFY_", "HUBSPOT_", "GOOGLESHEETS_")):
+        increment_tool_usage_counter(hook_context.tool_name)
 
     return {"allow": True}
 ```
 
-### 4. Specialized Subagents for Parallel Processing
+### 4. Workflow Classifier
 
-Create specialized agents that can work in parallel:
+Simple classifier to determine which workflows apply to a thread:
 
 ```python
-from claude_agent_sdk import Agent, ClaudeAgentOptions
-
-def create_calendar_subagent(composio_tools: list):
+async def classify_workflows(email_thread: dict, thread_context: dict) -> List[str]:
     """
-    Subagent specialized in calendar operations
+    Classify which workflows are relevant for this email thread
 
-    Can run in parallel with email subagent
+    Uses a simple LLM call to match thread context to workflow descriptions
     """
-    return Agent(
-        name="Calendar Specialist",
-        options=ClaudeAgentOptions(
-            system_prompt="""You are a calendar management specialist.
+    from anthropic import Anthropic
 
-Your responsibilities:
-- Check calendar availability for meeting requests
-- Create calendar events with proper details
-- Find optimal meeting times based on constraints
-- Add Google Meet links automatically
-- Respect working hours (9am-5pm in user's timezone)
+    client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-Always provide 2-3 time options when possible.
-Include timezone information in all responses.""",
+    # Build workflow descriptions for classification
+    workflow_descriptions = "\n".join([
+        f"- {name}: {config.description}"
+        for name, config in WORKFLOWS.items()
+    ])
 
-            allowed_tools=[
-                "GOOGLECALENDAR_FIND_FREE_TIME",
-                "GOOGLECALENDAR_CREATE_EVENT",
-                "GOOGLECALENDAR_LIST_EVENTS"
-            ],
+    thread_summary = f"""
+Thread Subject: {email_thread.get('subject', 'N/A')}
+From: {email_thread.get('from', 'N/A')}
+Latest Message:
+{email_thread.get('body', '')[:500]}...
 
-            permission_mode='acceptEdits',
-            max_turns=10
-        )
+Previous Messages: {len(thread_context.get('previous_emails', []))} emails
+"""
+
+    classification_prompt = f"""Analyze this email thread and determine which business workflows should be triggered.
+
+Available Workflows:
+{workflow_descriptions}
+
+Email Thread:
+{thread_summary}
+
+Return ONLY a JSON array of workflow names that apply (e.g., ["contract_generation", "crm_update"]).
+If no workflows apply, return empty array [].
+
+Consider:
+- What is being requested or discussed?
+- What business actions need to happen?
+- Are there multiple workflows needed?
+
+JSON array:"""
+
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=200,
+        messages=[{"role": "user", "content": classification_prompt}]
     )
 
+    # Parse response
+    import json
+    workflow_names = json.loads(response.content[0].text.strip())
 
-def create_email_drafter_subagent(composio_tools: list):
-    """
-    Subagent specialized in email drafting
+    # Filter to valid workflows
+    valid_workflows = [name for name in workflow_names if name in WORKFLOWS]
 
-    Can run in parallel with calendar subagent
-    """
-    return Agent(
-        name="Email Drafter",
-        options=ClaudeAgentOptions(
-            system_prompt="""You are an expert email writer.
-
-Your responsibilities:
-- Draft professional, context-aware email responses
-- Match the sender's tone and communication style
-- Include all necessary information from thread history
-- Use proper greetings and closings
-- Be concise but complete
-- Reference specific points from the original email
-
-Style Guidelines:
-- Professional but friendly
-- Use bullet points for multiple items
-- Include clear call-to-action when needed
-- Proofread for grammar and clarity
-
-Always create a draft first (GMAIL_CREATE_DRAFT) before considering sending.""",
-
-            allowed_tools=[
-                "GMAIL_CREATE_DRAFT",
-                "GMAIL_SEARCH",
-                "Read",  # For templates
-                "mcp__cheerful_custom__load_email_template"
-            ],
-
-            permission_mode='acceptEdits',
-            max_turns=10
-        )
-    )
-
-
-def create_research_subagent():
-    """
-    Subagent specialized in research
-
-    Can gather information in parallel with other tasks
-    """
-    return Agent(
-        name="Research Specialist",
-        options=ClaudeAgentOptions(
-            system_prompt="""You are a research specialist.
-
-Your responsibilities:
-- Research topics mentioned in emails
-- Gather relevant information from the web
-- Summarize findings concisely
-- Provide sources for all information
-- Focus on recent, relevant data
-
-Always cite sources and indicate recency of information.""",
-
-            allowed_tools=[
-                "WebSearch",
-                "WebFetch",
-                "Read"
-            ],
-
-            permission_mode='plan',  # Read-only for research
-            max_turns=10
-        )
-    )
+    return valid_workflows
 ```
 
-### 5. Parallel Execution with Subagents
+### 5. Simple Workflow Execution
 
-Coordinate multiple subagents working simultaneously:
+Just pass workflows and tools to Claude Agent SDK - no hardcoded orchestration:
 
 ```python
-import asyncio
+from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions
+from composio import Composio
 from datetime import datetime
+import os
 
-async def handle_meeting_request_parallel(
-    email_content: dict,
+async def run_workflows(
+    email_thread: dict,
     thread_context: dict,
-    user_settings: dict,
-    composio_tools: list
-):
+    user_settings: dict
+) -> dict:
     """
-    Handle meeting request using parallel subagents
+    Run business automation workflows - NO hardcoded logic
 
-    Executes calendar check and email draft simultaneously
+    Steps:
+    1. Classify which workflows apply to thread
+    2. Collect allowed tools from workflows
+    3. Build combined prompt
+    4. Let Claude Agent SDK handle everything autonomously
     """
-
-    # Create specialized subagents
-    calendar_agent = create_calendar_subagent(composio_tools)
-    email_agent = create_email_drafter_subagent(composio_tools)
-    research_agent = create_research_subagent()
-
-    # Extract meeting request details
-    meeting_topic = email_content.get('subject', '')
-    preferred_times = extract_time_preferences(email_content['body'])
-
-    # Define parallel tasks
-    async def calendar_task():
-        """Find availability and create event"""
-        query = f"""Find available times for a meeting about '{meeting_topic}'.
-        Preferred times: {preferred_times}
-        Duration: 30 minutes
-        Create an event if availability found."""
-
-        result = await calendar_agent.run(query)
-        return result
-
-    async def email_draft_task():
-        """Draft response email"""
-        query = f"""Draft a professional email response to:
-        From: {email_content['from']}
-        Subject: {email_content['subject']}
-
-        Original message:
-        {email_content['body']}
-
-        Thread history:
-        {format_thread(thread_context)}
-
-        The email should confirm meeting interest and reference the calendar availability."""
-
-        result = await email_agent.run(query)
-        return result
-
-    async def research_task():
-        """Research meeting topic (if needed)"""
-        if meeting_topic and requires_research(meeting_topic):
-            query = f"Research recent information about: {meeting_topic}"
-            result = await research_agent.run(query)
-            return result
-        return None
-
-    # Execute all tasks in parallel
     start_time = datetime.now()
 
-    calendar_result, email_result, research_result = await asyncio.gather(
-        calendar_task(),
-        email_draft_task(),
-        research_task(),
-        return_exceptions=True
+    # Step 1: Classify workflows
+    workflow_names = await classify_workflows(email_thread, thread_context)
+
+    if not workflow_names:
+        return {
+            "success": True,
+            "workflows": [],
+            "message": "No workflows triggered for this thread"
+        }
+
+    # Step 2: Collect tools and prompts from matched workflows
+    selected_workflows = [WORKFLOWS[name] for name in workflow_names]
+
+    # Collect all unique tools
+    all_tools = set()
+    for workflow in selected_workflows:
+        all_tools.update(workflow.allowed_tools)
+
+    # Build combined workflow prompt
+    workflow_prompts = "\n\n---\n\n".join([
+        f"**{workflow.name.upper()}**:\n{workflow.prompt}"
+        for workflow in selected_workflows
+    ])
+
+    # Step 3: Fetch Composio tools
+    composio = Composio(api_key=os.getenv("COMPOSIO_API_KEY"))
+    user_id = user_settings.get("user_id", "")
+
+    # Get all Composio toolkits needed
+    toolkits = set()
+    for tool in all_tools:
+        if tool.startswith("SHOPIFY_"):
+            toolkits.add("shopify")
+        elif tool.startswith("HUBSPOT_"):
+            toolkits.add("hubspot")
+        elif tool.startswith("GOOGLESHEETS_"):
+            toolkits.add("googlesheets")
+        elif tool.startswith("GOOGLECALENDAR_"):
+            toolkits.add("googlecalendar")
+
+    if toolkits:
+        composio_tools = composio.tools.get(
+            user_id=user_id,
+            toolkits=list(toolkits),
+            limit=100
+        )
+    else:
+        composio_tools = []
+
+    # Step 4: Create Claude Agent with combined config
+    options = ClaudeAgentOptions(
+        system_prompt=f"""You are an autonomous business process automation agent.
+
+You have been assigned these workflows to execute:
+{', '.join([w.name for w in selected_workflows])}
+
+IMPORTANT: Execute ALL assigned workflows. Work on them in parallel when possible.
+
+Your tools and responsibilities:
+{workflow_prompts}
+
+Email Thread Context:
+- Subject: {email_thread.get('subject', 'N/A')}
+- From: {email_thread.get('from', 'N/A')}
+- Participants: {', '.join(thread_context.get('participants', []))}
+
+Work autonomously until all workflows are complete. Coordinate actions across systems.""",
+
+        allowed_tools=list(all_tools),
+        permission_mode='plan',  # Require approval for sensitive operations
+        max_turns=30,
+
+        # Add validation hooks
+        hooks={
+            "PreToolUse": [
+                HookMatcher(
+                    tool_names=["SHOPIFY_CREATE_DISCOUNT_CODE", "SHOPIFY_CREATE_DRAFT_ORDER"],
+                    handler=validate_shopify_operation
+                ),
+                HookMatcher(
+                    tool_names=["HUBSPOT_CREATE_DEAL", "HUBSPOT_UPDATE_DEAL"],
+                    handler=validate_crm_operation
+                ),
+                HookMatcher(
+                    tool_names=["GOOGLECALENDAR_SEND_INVITE"],
+                    handler=validate_calendar_invite
+                )
+            ],
+            "PostToolUse": [
+                HookMatcher(handler=track_tool_usage),
+                HookMatcher(
+                    tool_names=["GOOGLESHEETS_APPEND_VALUES"],
+                    handler=validate_sheet_update
+                )
+            ]
+        },
+
+        # MCP servers for custom tools
+        mcp_servers={
+            "business_custom": create_custom_business_tools_mcp_server()
+        }
     )
+
+    client = ClaudeSDKClient(options=options)
+
+    # Build query with full thread context
+    thread_history = "\n\n".join([
+        f"[{email.get('date')}] {email.get('from')}:\n{email.get('body', '')}"
+        for email in thread_context.get('previous_emails', [])
+    ])
+
+    query = f"""Process this email thread and execute all assigned workflows.
+
+THREAD HISTORY:
+{thread_history}
+
+LATEST MESSAGE:
+From: {email_thread.get('from')}
+Date: {email_thread.get('date')}
+Body:
+{email_thread.get('body', '')}
+
+Execute all workflows assigned to you. Work until complete."""
+
+    # Step 5: Execute - let Claude figure everything out
+    result = await client.run(query)
 
     duration = (datetime.now() - start_time).total_seconds()
 
-    # Combine results
     return {
-        "calendar": calendar_result,
-        "email_draft": email_result,
-        "research": research_result,
-        "execution_time_seconds": duration,
-        "parallel_execution": True
+        "success": True,
+        "workflows": workflow_names,
+        "output": result.output,
+        "tools_used": [step.tool_name for step in result.steps if step.tool_name],
+        "iterations": result.turn_count,
+        "duration_seconds": duration
     }
 ```
 
-### 6. Main Execution Function
+### 6. Main Execution - Simple!
 
-Bring it all together with the main orchestrator:
+Just call `run_workflows` - no hardcoded logic:
 
 ```python
 from langfuse import observe
-from composio import Composio
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 @observe()
-async def process_email_with_claude_sdk(
-    email_content: dict,
-    user_settings: dict,
+async def process_business_automation(
+    email_thread: dict,
     thread_context: dict,
-    toolkits: List[str],
-    toolkit_rules: Dict[str, str],
-    campaign_rules: Dict[str, str],
-    use_parallel_subagents: bool = False
+    user_settings: dict
 ) -> dict:
     """
-    Process email using Claude Agent SDK with Composio integration
+    Process business automation - classifier determines workflows, agent executes
 
-    Args:
-        email_content: Email data being processed
-        user_settings: User configuration and preferences
-        thread_context: Email thread history and context
-        toolkits: Available Composio toolkits (e.g., ["gmail", "googlecalendar"])
-        toolkit_rules: Rules for how to use each toolkit
-        campaign_rules: Campaign-specific automation rules
-        use_parallel_subagents: Whether to use parallel subagent execution
+    That's it! No workflow_type parameter, no hardcoded handling, just:
+    1. Classify
+    2. Execute
 
     Returns:
-        dict with keys: success, output, tools_used, iterations, duration_ms
+        dict with workflows executed, output, tools used, iterations, duration
     """
-    try:
-        # Initialize Composio
-        composio = Composio(api_key=os.getenv("COMPOSIO_API_KEY"))
-        user_id = user_settings.get("agent_true_email", "")
+    result = await run_workflows(
+        email_thread=email_thread,
+        thread_context=thread_context,
+        user_settings=user_settings
+    )
 
-        # Fetch authenticated tools
-        composio_tools = composio.tools.get(
-            user_id=user_id,
-            toolkits=toolkits,
-            limit=100
-        )
-
-        # Decide execution strategy
-        if use_parallel_subagents and is_complex_request(email_content):
-            # Use parallel subagents for complex requests
-            logger.info("Using parallel subagent execution")
-
-            result = await handle_meeting_request_parallel(
-                email_content=email_content,
-                thread_context=thread_context,
-                user_settings=user_settings,
-                composio_tools=composio_tools
-            )
-
-            return {
-                "success": True,
-                "strategy": "parallel_subagents",
-                "result": result
-            }
-
-        else:
-            # Use main orchestrator agent for standard requests
-            logger.info("Using main orchestrator agent")
-
-            start_time = datetime.now()
-
-            # Create orchestrator
-            client = await create_email_orchestrator(
-                user_id=user_id,
-                toolkit_rules=toolkit_rules
-            )
-
-            # Build query with full context
-            query = build_query_from_email(
-                email_content=email_content,
-                thread_context=thread_context,
-                campaign_rules=campaign_rules,
-                user_settings=user_settings
-            )
-
-            # Execute with streaming for real-time progress
-            result = await client.run_streamed(query)
-
-            # Collect output
-            output_messages = []
-            tools_used = []
-
-            async for event in result.stream_events():
-                if event.type == "tool_call":
-                    tools_used.append(event.tool_name)
-                    logger.info(f"Tool used: {event.tool_name}")
-
-                if event.type == "message":
-                    output_messages.append(event.content)
-
-            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
-
-            return {
-                "success": True,
-                "strategy": "main_orchestrator",
-                "output": "\n".join(output_messages),
-                "tools_used": tools_used,
-                "iterations": result.turn_count,
-                "duration_ms": duration_ms
-            }
-
-    except Exception as e:
-        logger.error(f"Error in Claude SDK email processing: {str(e)}")
-        raise
-
-
-def build_query_from_email(
-    email_content: dict,
-    thread_context: dict,
-    campaign_rules: dict,
-    user_settings: dict
-) -> str:
-    """
-    Build comprehensive query for Claude agent
-
-    Includes all context needed for autonomous execution
-    """
-    query = f"""Process this email and take appropriate actions:
-
-FROM: {email_content['from']}
-TO: {email_content['to']}
-SUBJECT: {email_content['subject']}
-DATE: {email_content.get('date', 'N/A')}
-
-EMAIL BODY:
-{email_content['body']}
-
-THREAD HISTORY:
-{format_thread_history(thread_context)}
-
-USER PREFERENCES:
-{format_user_preferences(user_settings)}
-
-CAMPAIGN RULES:
-{format_campaign_rules(campaign_rules)}
-
-YOUR TASK:
-1. Analyze the email and determine what actions are needed
-2. Execute those actions autonomously (draft emails, check calendar, etc.)
-3. Work until the task is complete - you'll know when you're done
-4. Provide a summary of what you accomplished
-
-Remember:
-- Always create drafts before sending emails
-- Check calendar availability before proposing times
-- Match the sender's communication style
-- Be professional but friendly
-- Include all relevant context from the thread
-
-Begin processing."""
-
-    return query
-
-
-def is_complex_request(email_content: dict) -> bool:
-    """Determine if request is complex enough for parallel subagents"""
-    body = email_content.get('body', '').lower()
-
-    # Indicators of complexity
-    complex_indicators = [
-        'meeting' in body and 'calendar' in body,
-        len(body) > 500,  # Long email
-        'urgent' in body or 'asap' in body,
-        'multiple' in body or 'several' in body
-    ]
-
-    return sum(complex_indicators) >= 2
-
-
-def format_thread_history(thread_context: dict) -> str:
-    """Format thread history for context"""
-    if not thread_context.get('previous_emails'):
-        return "No previous emails in thread"
-
-    history = []
-    for email in thread_context['previous_emails'][-3:]:  # Last 3 emails
-        history.append(f"""
-[{email.get('date')}] {email.get('from')}:
-{email.get('body', '')[:200]}...
-""")
-
-    return "\n---\n".join(history)
-
-
-def format_user_preferences(user_settings: dict) -> str:
-    """Format user preferences for context"""
-    return f"""
-- Timezone: {user_settings.get('timezone', 'UTC')}
-- Working Hours: {user_settings.get('working_hours', '9am-5pm')}
-- Email Signature: {user_settings.get('signature', 'Standard signature')}
-- Preferred Meeting Duration: {user_settings.get('default_meeting_duration', 30)} minutes
-"""
-
-
-def format_campaign_rules(campaign_rules: dict) -> str:
-    """Format campaign rules for context"""
-    rules = []
-    for rule_type, rule_text in campaign_rules.items():
-        rules.append(f"- {rule_type}: {rule_text}")
-    return "\n".join(rules)
+    return result
 ```
 
 ## Complete Example Usage
 
-### Basic Usage
+### Example 1: Contract Generation Workflow
 
 ```python
 import asyncio
@@ -878,119 +1030,182 @@ from composio import Composio
 import os
 
 async def main():
-    # Sample email content
-    email_content = {
-        "from": "john.doe@example.com",
-        "to": "me@cheerful.com",
-        "subject": "Meeting Request - Q1 Planning",
+    # Sample email thread where contract criteria are met
+    email_thread = {
+        "from": "sarah.johnson@acmecorp.com",
+        "to": "sales@yourcompany.com",
+        "subject": "Re: Web Development Project - Ready to Move Forward",
+        "date": "2025-10-10",
+        "body": """Hi Team,
+
+Perfect! I'm ready to move forward with the project.
+
+To confirm our discussion:
+- Website redesign with 5 custom pages
+- E-commerce integration (Shopify)
+- Total cost: $12,500
+- Payment: 50% upfront, 50% on completion
+- Timeline: Start Nov 1, complete by Dec 15
+- Weekly progress meetings on Mondays at 2pm
+
+Everything looks good. Please send the contract and let's get started!
+
+Best,
+Sarah Johnson
+Director of Marketing, Acme Corp
+sarah.johnson@acmecorp.com"""
+    }
+
+    thread_context = {
+        "previous_emails": [
+            {
+                "from": "sales@yourcompany.com",
+                "date": "2025-10-08",
+                "body": "Thank you for your interest! For this project, our quote is $12,500..."
+            },
+            {
+                "from": "sarah.johnson@acmecorp.com",
+                "date": "2025-10-09",
+                "body": "The pricing works for us. Can we start November 1st?"
+            }
+        ],
+        "participants": ["sarah.johnson@acmecorp.com", "sales@yourcompany.com"],
+        "start_date": "2025-10-08"
+    }
+
+    user_settings = {
+        "user_id": "sales@yourcompany.com",
+        "timezone": "America/New_York",
+        "working_hours": "9am-5pm",
+        "team_email": "team@yourcompany.com"
+    }
+
+    # Process - classifier automatically determines workflows!
+    result = await process_business_automation(
+        email_thread=email_thread,
+        thread_context=thread_context,
+        user_settings=user_settings
+    )
+
+    print(f"Success: {result['success']}")
+    print(f"Workflows Executed: {', '.join(result['workflows'])}")
+    print(f"Tools Used: {', '.join(result['tools_used'])}")
+    print(f"Iterations: {result['iterations']}")
+    print(f"Duration: {result['duration_seconds']:.2f}s")
+    print(f"\nOutput:\n{result['output']}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Example 2: Shopify Order Workflow
+
+```python
+async def shopify_order_example():
+    # Email requesting bulk order with discount
+    email_thread = {
+        "from": "mike@retailstore.com",
+        "to": "orders@yourstore.com",
+        "subject": "Bulk Order Request - Returning Customer",
+        "date": "2025-10-10",
         "body": """Hi,
 
-Can we schedule a 30-minute meeting next week to discuss Q1 planning?
-I'm available Tuesday-Thursday afternoons, preferably 2-4pm.
+I'd like to place another order:
+- Product A: 50 units @ $25/unit
+- Product B: 30 units @ $40/unit
+- Product C: 20 units @ $15/unit
 
-Let me know what works for you.
+Total: $2,750
+
+As a returning customer, can I get the usual 15% discount?
+
+Ship to same address as last time.
 
 Thanks,
-John"""
+Mike Chen
+mike@retailstore.com"""
     }
 
     thread_context = {
         "previous_emails": [],
-        "participants": ["john.doe@example.com", "me@cheerful.com"]
+        "participants": ["mike@retailstore.com", "orders@yourstore.com"]
     }
 
     user_settings = {
-        "agent_true_email": "me@cheerful.com",
-        "timezone": "America/Los_Angeles",
-        "working_hours": "9am-5pm",
-        "default_meeting_duration": 30,
-        "signature": "Best regards,\nYour Name\nCheerful Team"
+        "user_id": "orders@yourstore.com",
+        "timezone": "America/Los_Angeles"
     }
 
-    toolkit_rules = {
-        "gmail": "Always draft before sending. Use professional tone.",
-        "googlecalendar": "Respect working hours. Add Google Meet link automatically.",
-        "slack": "Notify team of important scheduling changes."
-    }
-
-    campaign_rules = {
-        "meeting_requests": "Respond within 1 hour. Propose 2-3 time options."
-    }
-
-    # Process email with Claude SDK
-    result = await process_email_with_claude_sdk(
-        email_content=email_content,
-        user_settings=user_settings,
+    # Process - classifier automatically determines workflows!
+    result = await process_business_automation(
+        email_thread=email_thread,
         thread_context=thread_context,
-        toolkits=["gmail", "googlecalendar", "slack"],
-        toolkit_rules=toolkit_rules,
-        campaign_rules=campaign_rules,
-        use_parallel_subagents=True
+        user_settings=user_settings
     )
 
     print(f"Success: {result['success']}")
-    print(f"Strategy: {result['strategy']}")
-    print(f"Duration: {result.get('duration_ms', 'N/A')}ms")
-    print(f"Tools Used: {result.get('tools_used', [])}")
-    print(f"\nOutput:\n{result.get('output', result.get('result'))}")
+    print(f"Workflows Executed: {', '.join(result['workflows'])}")
+    print(f"Duration: {result['duration_seconds']:.2f}s")
+    print(f"\nOutput:\n{result['output']}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(shopify_order_example())
 ```
 
 ### Expected Output
 
 ```
 Success: True
-Strategy: parallel_subagents
-Duration: 3200ms
-Tools Used: ['GOOGLECALENDAR_FIND_FREE_TIME', 'GOOGLECALENDAR_CREATE_EVENT', 'GMAIL_CREATE_DRAFT', 'WebSearch']
+Workflows Executed: contract_generation, crm_update, calendar_coordination
+Tools Used: mcp__business_custom__check_contract_criteria, mcp__business_custom__generate_contract, HUBSPOT_CREATE_CONTACT, HUBSPOT_CREATE_DEAL, HUBSPOT_CREATE_NOTE, GOOGLESHEETS_APPEND_VALUES, GOOGLECALENDAR_CREATE_EVENT, GOOGLECALENDAR_SEND_INVITE
+Iterations: 12
+Duration: 4.7s
 
 Output:
-✅ Calendar Check Complete:
-   - Found 3 available slots:
-     • Tuesday, Oct 14 at 2:00 PM
-     • Wednesday, Oct 15 at 3:00 PM
-     • Thursday, Oct 16 at 2:30 PM
-   - Created calendar event for Tuesday, Oct 14 at 2:00 PM
-   - Google Meet link: https://meet.google.com/abc-defg-hij
+I've analyzed the email thread and all criteria for contract generation are met. I've executed three workflows in parallel:
 
-✅ Email Draft Created:
-   Subject: Re: Meeting Request - Q1 Planning
+CONTRACT GENERATION:
+✅ Contract Generated
+- Contract Number: CTR-2025-0042
+- Client: Acme Corp (Sarah Johnson)
+- Service: Website redesign with 5 custom pages + e-commerce integration
+- Amount: $12,500
+- Payment Terms: 50% upfront ($6,250), 50% on completion
+- Timeline: Nov 1 - Dec 15, 2025
+- File: /workspace/contracts/contract_CTR-2025-0042_Acme_Corp.pdf
 
-   Hi John,
+CRM UPDATE:
+✅ HubSpot Updated
+- Contact created/updated: Sarah Johnson (sarah.johnson@acmecorp.com)
+  - Company: Acme Corp
+  - Title: Director of Marketing
+- Deal created: "Acme Corp - Website Redesign"
+  - Amount: $12,500
+  - Stage: Proposal Sent
+  - Close Date: Dec 15, 2025
+- Note added with full contract details and thread context
+- Spreadsheet audit log updated (Contracts Tracker 2025)
 
-   Thanks for reaching out! I'd be happy to discuss Q1 planning with you.
+CALENDAR COORDINATION:
+✅ Kickoff Meeting Scheduled
+- Event: "Project Kickoff - Acme Corp Website Redesign"
+- Date: Monday, Nov 4, 2025 at 2:00 PM EST
+- Duration: 60 minutes (as requested - weekly meetings)
+- Attendees: sarah.johnson@acmecorp.com, team@yourcompany.com
+- Google Meet link: https://meet.google.com/xyz-abcd-efg
+- Invites sent to all participants
 
-   I've checked my calendar and have the following availability next week:
-   • Tuesday, October 14 at 2:00 PM PT
-   • Wednesday, October 15 at 3:00 PM PT
-   • Thursday, October 16 at 2:30 PM PT
-
-   I've tentatively scheduled us for Tuesday, October 14 at 2:00 PM (30 minutes).
-   Google Meet link: https://meet.google.com/abc-defg-hij
-
-   Please let me know if this works for you or if you'd prefer one of the other times.
-
-   Looking forward to our discussion!
-
-   Best regards,
-   Your Name
-   Cheerful Team
-
-✅ Background Research:
-   - Q1 typically refers to January-March fiscal quarter
-   - Common Q1 planning topics: budget allocation, goal setting, project prioritization
-   - Recommended agenda items: review Q4 performance, set Q1 OKRs, resource planning
-
-Execution Summary:
-- 3 subagents executed in parallel
-- Total time: 3.2 seconds (vs ~8s sequential)
-- 4 tools called across subagents
-- Draft ready for review/approval
+All workflows completed successfully. Contract ready for delivery, CRM fully updated, and kickoff meeting scheduled.
 ```
 
-## Benefits for Cheerful Email Automation
+**Key Points**:
+- **Classifier automatically identified 3 workflows** based on email content
+- **Agent executed all workflows autonomously** - no hardcoded orchestration
+- **Parallel execution** - agent coordinated across multiple systems simultaneously
+- **12 iterations** - agent iterated as needed to complete all tasks
+- **4.7 seconds total** - efficient execution with automatic parallelization
+
+## Benefits for Business Automation
 
 ### 1. Reduced LLM Costs
 
@@ -1021,82 +1236,97 @@ Research Agent (3.2s) ┘
 Total: 3.2 seconds (50% faster)
 ```
 
-### 3. Better Email Quality
+### 3. Better Data Quality & Accuracy
 
-- **Claude Sonnet 4.5**: Superior writing quality vs GPT-4
-- **Context Awareness**: Automatic compaction maintains thread history
-- **Verification Loop**: PostToolUse hooks ensure draft quality
-- **Template Integration**: Custom tools for brand consistency
+- **Claude Sonnet 4.5**: Superior extraction and understanding of unstructured data
+- **Context Awareness**: Automatic compaction maintains full thread history for extraction
+- **Verification Loop**: PostToolUse hooks ensure data integrity before writes
+- **Criteria Validation**: Custom tools prevent workflows from executing with incomplete data
 
 ### 4. Flexible Tool Selection
 
 **Current Approach:**
 ```python
-# Rigid planning - must decide upfront
-tool_flow = {
+# Rigid workflow - must decide all steps upfront
+workflow = {
     "steps": [
-        {"tools": ["GMAIL_CREATE_DRAFT"]},
-        {"tools": ["GOOGLECALENDAR_FIND_FREE_TIME"]},
-        # Fixed sequence
+        {"action": "extract_data", "tools": ["custom_extractor"]},
+        {"action": "validate", "tools": ["validator"]},
+        {"action": "update_crm", "tools": ["HUBSPOT_CREATE_CONTACT"]},
+        # Fixed sequence, can't adapt
     ]
 }
 ```
 
 **Claude SDK Approach:**
 ```python
-# Agent dynamically decides based on email content
+# Agent dynamically decides based on thread content and workflow type
 allowed_tools = [
-    "GMAIL_*",  # All Gmail tools
+    "SHOPIFY_*",  # All Shopify tools
+    "HUBSPOT_*",  # All HubSpot tools
+    "GOOGLESHEETS_*",  # All Sheets tools
     "GOOGLECALENDAR_*",  # All Calendar tools
-    "SLACK_*",  # All Slack tools
-    "NOTION_*",  # All Notion tools
+    "mcp__business_custom__*",  # Custom business tools
     "WebSearch", "Read", "Write"
 ]
-# Agent picks what's needed for THIS specific email
+# Agent picks what's needed for THIS specific workflow instance
 ```
 
-**Benefit**: Handles irregular requests (urgent meetings, multi-party coordination, research needs) without pre-planning.
+**Benefit**: Handles variations in business processes (different contract types, varying order requirements, irregular meeting schedules) without pre-programming every scenario.
 
 ### 5. Autonomous Iteration
 
 **Current Approach:**
-- Max 10 iterations hardcoded
+- Max iterations hardcoded per workflow
 - Must validate after each step
-- Can't adapt to unexpected results
+- Can't adapt to unexpected results or missing data
 
 **Claude SDK Approach:**
-- Configurable max_turns (e.g., 20)
-- Agent iterates until task complete
-- Self-corrects based on tool results
-- Hooks provide safety rails
+- Configurable max_turns (e.g., 25 for complex workflows)
+- Agent iterates until workflow complete
+- Self-corrects based on tool results and validation
+- Hooks provide safety rails for business logic
 
-**Example**: If calendar unavailable, agent automatically:
-1. Searches for alternative times
-2. Updates draft with new options
-3. Retries until successful
+**Example**: If contract criteria not met, agent automatically:
+1. Identifies missing information (e.g., payment terms not discussed)
+2. Stops workflow and reports what's needed
+3. In future runs, validates criteria before proceeding
+
+**Example 2**: If Shopify customer not found:
+1. Searches with variations (name vs email)
+2. If still not found, creates new customer record
+3. Proceeds with discount validation and order creation
 
 ### 6. Production-Ready Error Handling
 
-**Hooks provide deterministic safety:**
+**Hooks provide deterministic safety for business operations:**
 
 ```python
-# Prevent sending emails without compliance check
-@hook PreToolUse(GMAIL_SEND_EMAIL)
-def ensure_compliance(ctx):
-    if not ctx.custom_data['compliance_checked']:
-        return {"deny": True}
+# Prevent Shopify orders exceeding limits
+@hook PreToolUse(SHOPIFY_CREATE_DRAFT_ORDER)
+def validate_order_limit(ctx):
+    total = calculate_order_total(ctx.tool_input)
+    if total > 10000:
+        return {"deny": True, "reason": "Order exceeds $10k limit - requires approval"}
 
-# Prevent calendar conflicts
-@hook PreToolUse(GOOGLECALENDAR_CREATE_EVENT)
-def prevent_double_booking(ctx):
-    if has_conflict(ctx.tool_input):
-        return {"deny": True, "reason": "Calendar conflict"}
+# Prevent duplicate CRM contacts
+@hook PreToolUse(HUBSPOT_CREATE_CONTACT)
+def prevent_duplicate_contact(ctx):
+    email = ctx.tool_input.get('properties', {}).get('email')
+    if contact_exists(email):
+        return {"deny": True, "reason": "Contact exists - use UPDATE instead"}
 
-# Ensure draft quality
-@hook PostToolUse(GMAIL_CREATE_DRAFT)
-def validate_draft(ctx):
-    if not meets_quality_standards(ctx.tool_output):
-        return {"retry": True}
+# Validate contract generation criteria
+@hook PreToolUse(mcp__business_custom__generate_contract)
+def ensure_criteria_met(ctx):
+    if not ctx.custom_data.get('criteria_validated'):
+        return {"deny": True, "reason": "Must validate criteria before generating contract"}
+
+# Ensure spreadsheet data written
+@hook PostToolUse(GOOGLESHEETS_APPEND_VALUES)
+def validate_sheet_write(ctx):
+    if ctx.tool_output.get('updatedRows', 0) == 0:
+        return {"retry": True, "reason": "No rows written - retrying"}
 ```
 
 ### 7. Observability
