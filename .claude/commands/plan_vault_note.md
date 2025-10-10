@@ -135,6 +135,50 @@ After getting initial clarifications:
    - Do NOT proceed to plan writing with unresolved questions
    - Spawn additional research tasks if needed
 
+### Step 2.5: Identify Related Notes for Updates
+
+After deep research is complete and before creating the plan outline:
+
+1. **Find existing notes that will need updates**:
+   - Use Grep to search vault for notes mentioning the new topic (by name or related keywords)
+   - Read those notes to identify:
+     - Outdated information that should be updated
+     - Missing relationships that should be added
+     - Sections that could reference the new note once it's created
+
+2. **Analyze update requirements**:
+   - For each related note found, determine:
+     - What section should reference the new note?
+     - Is there outdated information to correct?
+     - Should there be a bidirectional link?
+     - What is the rationale for the update?
+
+3. **Document planned updates** to include in the plan document later:
+   ```
+   ## Related Notes to Update
+
+   ### Note: apps/vault/concepts/existing-note.md
+   - **Section**: "Key Technologies"
+   - **Planned Update**: Add [[new-note]] with description: "[brief description]"
+   - **Rationale**: New note provides implementation details for concepts discussed here
+
+   ### Note: apps/vault/tech/another-note.md
+   - **Section**: "How It Relates"
+   - **Planned Update**: Add bidirectional link to [[new-note]]
+   - **Rationale**: Both notes cover related concepts that should reference each other
+
+   ### Note: apps/vault/concepts/outdated-note.md
+   - **Section**: "Definition"
+   - **Planned Update**: Update definition based on information in new note
+   - **Rationale**: New note contains more current/accurate information about [specific detail]
+   ```
+
+4. **Track these updates in the plan**:
+   - Include "Related Notes to Update" section in the final plan document
+   - This section should come after the note content specifications
+   - Each update should specify: file path, section, exact change, rationale
+   - These updates should be executed AFTER the new note(s) are written
+
 ### Step 3: Plan Outline Development
 
 Once research is complete and all questions are answered:
@@ -301,6 +345,31 @@ updated: YYYY-MM-DD
 
 ---
 
+## Related Notes to Update
+
+After creating the new note(s), the following existing notes should be updated to maintain vault consistency and establish proper relationships:
+
+### Note: apps/vault/concepts/existing-note.md
+- **Section**: "Key Technologies" (or specify section name)
+- **Planned Update**: Add [[new-note]] with brief description
+- **Rationale**: [Why this relationship is important - e.g., "New note implements concepts discussed here"]
+- **Type**: Add wikilink | Update outdated info | Add bidirectional link
+
+### Note: apps/vault/tech/another-note.md
+- **Section**: "Related Concepts"
+- **Planned Update**: Add link to [[new-note]] in related concepts list
+- **Rationale**: [Why these notes should reference each other]
+- **Type**: Add wikilink | Update outdated info | Add bidirectional link
+
+[Continue for each note that needs updating...]
+
+**Execution**: These updates should be applied AFTER the new note(s) are written, either:
+- Manually by reviewing each note and applying changes
+- Automatically using `/sync_vault_relationships` command
+- As part of the note writing workflow
+
+---
+
 ## Research References
 - [Official documentation URL]
 - [Tutorial/guide URL]
@@ -337,12 +406,17 @@ After writing the plan document:
    **Scope:**
    - [List of notes that will be created]
 
+   **Related Notes to Update:**
+   - [N] existing notes will need updates after new note(s) are written
+   - Updates include: bidirectional links, new references, corrected information
+
    **Ready to write:** [Yes/No - explain if no]
 
    Would you like me to:
    - Adjust the scope or note boundaries?
    - Add more detail to any section?
    - Proceed with writing the actual vault notes based on this plan?
+   - Review the specific updates planned for existing notes?
    ```
 
 ### Step 6: Iteration & Refinement
@@ -359,6 +433,16 @@ After writing the plan document:
    - Create notes one at a time, getting user approval between each
    - Update vault index as specified in the plan
    - Ensure bidirectional links between related notes
+
+3. **After writing new notes, apply related note updates**:
+   - Reference the "Related Notes to Update" section from the plan
+   - For each update listed:
+     - Read the existing note
+     - Apply the specified change (add wikilink, update info, etc.)
+     - Update the note's "updated" date in frontmatter
+     - Add entry to changelog if appropriate
+   - Alternatively, suggest running `/sync_vault_relationships` to automate this
+   - Verify all bidirectional relationships are established
 
 ## Important Guidelines
 
@@ -524,6 +608,7 @@ updated: YYYY-MM-DD
 - **Critical ordering**: Follow the numbered steps exactly
   - ALWAYS read mentioned files first before spawning sub-tasks (Step 1)
   - ALWAYS wait for all sub-agents to complete before synthesizing (Step 2)
+  - ALWAYS identify related notes for updates after research (Step 2.5)
   - ALWAYS create outline and get approval before writing plan (Step 3 before Step 4)
   - NEVER write the plan with incomplete research or unapproved outline
 - **Output location**: Plans go to `thoughts/shared/plans/vault_notes/{topic}.md`

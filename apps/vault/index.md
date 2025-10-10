@@ -49,6 +49,7 @@ This is a digital garden documenting concepts, technologies, and examples in con
 ## Examples
 
 - [[examples/agentic-rag-workflow|Agentic RAG Workflow]] - Practical example of autonomous reasoning patterns
+- [[examples/state-driven-composio-workflow|State-Driven Tool Execution with Composio and OpenAI]] - Iterative tool execution with goal validation using Composio, OpenAI Responses API, and Pydantic
 
 ## Explore
 
