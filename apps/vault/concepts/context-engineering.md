@@ -3,7 +3,7 @@ title: Context Engineering
 type: concept
 tags: [llm, ai, context, core-concept]
 created: 2025-10-03
-updated: 2025-10-04
+updated: 2025-10-10
 ---
 
 # Context Engineering
@@ -110,6 +110,10 @@ Task(thoughts-locator, "discover past decisions")
 
 ## Advanced Techniques for Long-Horizon Tasks
 
+### Self-Improving Context with ACE
+
+[[agentic-context-engineering|Agentic Context Engineering (ACE)]] represents an advanced approach that creates context which evolves and improves over time. Rather than treating context as static, ACE uses a Generator-Reflector-Curator architecture to accumulate domain knowledge through structured delta updates. This addresses both context collapse (information degradation through iterative rewriting) and brevity bias (over-compression into generic summaries) in long-horizon agent tasks, enabling models to learn from execution experience without parameter updates.
+
 ### The Attention Budget Concept
 Large language models have a finite **attention budget** - a fundamental constraint where models experience **context rot** (degraded recall and performance) as token count increases. All context engineering ultimately aims to maximize the value extracted from this limited resource.
 
@@ -206,5 +210,6 @@ Context engineering is not a solved problem but an evolving discipline. Key prin
 
 ## Changelog
 
+- **2025-10-10**: Added reference to [[agentic-context-engineering|ACE]] as advanced self-improving context technique
 - **2025-10-04**: Enhanced with Anthropic's advanced techniques - attention budget, system prompt design, tool design, retrieval strategies, long-horizon task techniques, and guiding principles
 - **2025-10-03**: Initial note created with core strategies, best practices, and relationships

@@ -3,7 +3,7 @@ title: Context Compression & Pruning
 type: concept
 tags: [optimization, context, tokens, efficiency]
 created: 2025-10-03
-updated: 2025-10-03
+updated: 2025-10-10
 ---
 
 # Context Compression & Pruning
@@ -66,9 +66,19 @@ Context compression and pruning techniques reduce the number of tokens in an LLM
 - **Accuracy Maintenance**: Minimal performance loss with proper tuning
 - **Token Efficiency**: Using 1/4 of tokens while maintaining or improving performance
 
+## Complementary Approaches
+
+While context compression reduces token usage by removing information, [[agentic-context-engineering|Agentic Context Engineering (ACE)]] takes the opposite approach: growing and refining context over time through structured delta updates. These approaches address different scenarios:
+
+- **Compression**: When context exceeds model limits or cost constraints require reduction
+- **ACE**: When accumulating domain knowledge improves performance and context limits allow growth
+
+Both can be used together: ACE for growing valuable knowledge, compression for managing total size when context approaches limits.
+
 ## How It Relates
 
 - **[[context-engineering]]**: Directly implements the "Compress" strategy
+- **[[agentic-context-engineering]]**: Contrasting approach that grows rather than compresses context
 - **[[retrieval-augmented-generation]]**: Works synergistically to optimize what enters the context window
 - **[[observability-in-context]]**: Measure compression-quality tradeoffs
 
@@ -90,4 +100,5 @@ Context compression and pruning techniques reduce the number of tokens in an LLM
 
 ## Changelog
 
+- **2025-10-10**: Added complementary approaches section comparing compression to [[agentic-context-engineering|ACE]]
 - **2025-10-03**: Initial note created with 5 main techniques, performance metrics, and relationships

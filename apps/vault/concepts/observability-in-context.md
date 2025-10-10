@@ -3,7 +3,7 @@ title: Observability in Context
 type: concept
 tags: [observability, monitoring, evaluation, debugging]
 created: 2025-10-03
-updated: 2025-10-03
+updated: 2025-10-10
 ---
 
 # Observability in Context
@@ -94,9 +94,11 @@ LLM observability is the practice of gathering telemetry data while an LLM-power
 - Refine prompts using real-world data
 - Optimize context based on effectiveness metrics
 - Fine-tune evaluations based on feedback
+- Track context evolution in [[agentic-context-engineering|ACE]]-based systems
 
 ---
 
 ## Changelog
 
+- **2025-10-10**: Added ACE-based systems to continuous improvement applications
 - **2025-10-03**: Initial note created with key capabilities, best practices, and relationships

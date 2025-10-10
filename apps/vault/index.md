@@ -31,6 +31,7 @@ This is a digital garden documenting concepts, technologies, and examples in con
 
 ### Core Context Engineering
 - [[concepts/context-engineering|Context Engineering]] - Strategies for managing context in AI systems
+- [[concepts/agentic-context-engineering|Agentic Context Engineering (ACE)]] - Self-improving context through evolving playbooks
 - [[concepts/retrieval-augmented-generation|Retrieval-Augmented Generation (RAG)]] - Enhancing LLMs with retrieved information
 - [[concepts/rag-evolution-context-window-era|RAG Evolution in Context Window Era]] - How RAG adapts to larger context windows
 - [[concepts/context-compression-pruning|Context Compression & Pruning]] - Techniques for managing context size
