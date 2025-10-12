@@ -1,7 +1,7 @@
 ---
 title: Business Automation with Claude Agent SDK and Composio
 type: example
-tags: [agent, claude-agent-sdk, composio, automation, hooks, subagents, mcp, tool-orchestration, shopify, hubspot, contracts, spreadsheets, calendar]
+tags: [agent, claude-agent-sdk, composio, automation, hooks, subagents, tool-orchestration, shopify, hubspot, contracts, spreadsheets, calendar]
 created: 2025-10-10
 updated: 2025-10-10
 ---
@@ -24,7 +24,7 @@ This example demonstrates building autonomous business process automation agents
 **Technologies:**
 - **[[claude-agent-sdk]]**: Autonomous agent framework with built-in loop, hooks, subagents
 - **[[composio]]**: Tool integration platform providing authenticated access to Shopify, HubSpot, Google Sheets, Calendar, etc.
-- **Custom Tools**: Pass directly like Composio tools (recommended), or use [[model-context-protocol|MCP]] for reusable tool libraries
+- **Custom Tools**: Pass directly like Composio tools using Anthropic tool format
 - **Python asyncio**: Async execution for parallel subagent processing
 
 ## The Simple Approach
@@ -105,13 +105,13 @@ Email Thread
                         ▼
             ┌────────────────────────────────┐
             │  Composio + Custom Tools       │
-            │  (Direct or MCP - your choice) │
+            │  (Direct tool definitions)     │
             └────────────────────────────────┘
 ```
 
 **What you configure:**
 1. **Workflow definitions** (`WORKFLOWS` dict) - just prompts + tool whitelists
-2. **Custom tools** (optional) - Pass directly like Composio tools, or use MCP for reusability
+2. **Custom tools** (optional) - Pass directly like Composio tools
 3. **Hooks** (optional) - safety validations
 
 **What Claude Agent SDK handles:**
@@ -119,7 +119,7 @@ Email Thread
 - Claude extracts data from threads using its native analysis capabilities
 - Business logic is mostly handled by Claude + Composio tools directly
 
-**Key Insight**: Custom tools work just like Composio tools - define them in Anthropic format and pass via `tools` parameter. No MCP required unless you need reusability.
+**Key Insight**: Custom tools work just like Composio tools - define them in Anthropic format and pass via `tools` parameter.
 
 ### Agent Flow
 
@@ -293,11 +293,7 @@ Include agenda from thread in event description.""",
 
 ### 2. Custom Tool: Shopify Discount Creation via GraphQL
 
-**You have two options for custom tools:**
-
-#### Option A: Direct Tool Definition (Simpler - Recommended)
-
-Pass custom tools directly without MCP:
+Define custom tools directly in Anthropic format and pass them alongside Composio tools:
 
 ```python
 import random
@@ -376,54 +372,6 @@ options = ClaudeAgentOptions(
     allowed_tools=[...]
 )
 ```
-
-**Pros**: Simple, no MCP server needed, easy to test
-**Cons**: Tools tied to this specific agent instance
-
----
-
-#### Option B: MCP Server (For Reusability)
-
-Use MCP when you want reusable tool servers:
-
-```python
-from claude_agent_sdk import tool, create_sdk_mcp_server
-
-@tool(
-    "create_shopify_discount_code",
-    "Create a Shopify discount code using GraphQL",
-    {"title": str, "discount_type": str, "value": float}
-)
-async def create_shopify_discount_code(args):
-    # Same implementation as above
-    title = args['title']
-    code = f"DISCOUNT-{random.randint(1000, 9999)}"
-    # ... build GraphQL query ...
-    return {"discount_code": code, "graphql_query": "..."}
-
-# Create MCP server
-def create_discount_tool_mcp_server():
-    return create_sdk_mcp_server(
-        name="shopify-discount-wrapper",
-        version="1.0.0",
-        tools=[create_shopify_discount_code]
-    )
-
-# Pass to agent
-options = ClaudeAgentOptions(
-    tools=composio_tools,
-    mcp_servers={
-        "shopify_discount": create_discount_tool_mcp_server()
-    }
-)
-```
-
-**Pros**: Reusable across multiple agents, better for complex tool sets
-**Cons**: More boilerplate
-
----
-
-**Recommendation**: Use **Option A (direct tools)** for simple custom tools. Use **Option B (MCP)** when building reusable tool libraries or complex tool orchestration.
 
 **Note**: This tool generates GraphQL mutation details, then the agent uses `SHOPIFY_GRAPHQL_TOOL` from Composio to execute it. All other business logic is handled directly by Claude with Composio tools.
 
@@ -743,9 +691,6 @@ composio_tools = composio.tools.get(
 options = ClaudeAgentOptions(
     system_prompt="Your automation prompt...",
     tools=composio_tools,  # ✅ Pass Composio tools directly!
-    mcp_servers={
-        "shopify_discount_wrapper": create_discount_tool_mcp_server()
-    }
 )
 
 client = ClaudeSDKClient(options=options)
@@ -757,15 +702,16 @@ result = await client.run("Process this email thread...")
 1. **Native Support**: Claude Agent SDK accepts Composio tools via the `tools` parameter in `ClaudeAgentOptions` - no conversion needed!
 2. **Authentication**: Composio handles OAuth/API key management per user via `user_id` (each user has their own connected accounts)
 3. **Tool Discovery**: Agent sees all Composio tools matching the specified toolkits (e.g., all Shopify, HubSpot, Google tools)
-4. **Combined Tools**: Mix Composio tools + MCP tools + built-in tools (Read/Write) seamlessly in one agent
+4. **Combined Tools**: Mix Composio tools + custom tools + built-in tools (Read/Write) seamlessly in one agent
 5. **Tool Whitelisting**: Use `allowed_tools` to restrict which specific tools the agent can call (security layer)
 
 **What happens under the hood:**
 - Composio returns tools in [Anthropic tool format](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
-- Claude Agent SDK merges Composio tools + MCP tools into unified tool registry
+- Claude Agent SDK merges Composio tools + custom tools into unified tool registry
 - When agent calls a Composio tool, SDK routes execution through Composio's API
-- Composio executes the tool using the user's authenticated connection
-- Result is returned to the agent for next iteration
+- When agent calls a custom tool, SDK uses the provided executor function
+- Composio executes tools using the user's authenticated connection
+- Results are returned to the agent for next iteration
 
 **Tool Whitelisting Example:**
 ```python
@@ -784,11 +730,11 @@ options = ClaudeAgentOptions(
 
 This pattern gives you:
 - ✅ **250+ authenticated tools** from Composio
-- ✅ **Custom business logic** via MCP servers
+- ✅ **Custom business logic** via direct tool definitions
 - ✅ **Fine-grained control** via whitelisting
 - ✅ **Per-user authentication** for multi-tenant apps
 
-**Summary**: Yes, it's that simple! `tools = composio.tools.get(...)` → `ClaudeAgentOptions(tools=composio_tools)` → Claude Agent SDK handles the rest. Native support out of the box.
+**Summary**: Yes, it's that simple! `tools = composio.tools.get(...)` → `ClaudeAgentOptions(tools=composio_tools + custom_tools)` → Claude Agent SDK handles the rest. Native support out of the box.
 
 ### 7. Complete Workflow Execution Example
 
@@ -840,7 +786,7 @@ async def run_workflows(
         for workflow in selected_workflows
     ])
 
-    # Step 3: Define custom tools (Option A - Direct)
+    # Step 3: Define custom tools
     custom_tools = []  # Add custom tool definitions here if needed
     custom_tool_executors = {}  # Add executors here if needed
 
@@ -895,7 +841,7 @@ Work autonomously until all workflows are complete. Coordinate actions across sy
         # Combine Composio tools + custom tools (if any)
         tools=composio_tools + custom_tools,  # Mix both!
 
-        # Custom tool executors for direct tools (Option A)
+        # Custom tool executors for direct tools
         tool_executors=custom_tool_executors,
 
         # Whitelist specific tools the agent can call
@@ -928,11 +874,6 @@ Work autonomously until all workflows are complete. Coordinate actions across sy
                 )
             ]
         }
-
-        # Optional: Use MCP servers for reusable tools (Option B)
-        # mcp_servers={
-        #     "shopify_discount": create_discount_tool_mcp_server()
-        # }
     )
 
     client = ClaudeSDKClient(options=options)
@@ -1249,7 +1190,7 @@ allowed_tools = [
     "HUBSPOT_*",  # All HubSpot tools (from Composio)
     "GOOGLESHEETS_*",  # All Sheets tools (from Composio)
     "GOOGLECALENDAR_*",  # All Calendar tools (from Composio)
-    "create_shopify_discount_code",  # Custom tool (direct or MCP)
+    "create_shopify_discount_code",  # Custom tool (direct definition)
     "Read", "Write"  # File operations
 ]
 # Agent picks what's needed for THIS specific workflow instance
@@ -1398,7 +1339,6 @@ async def process_email_with_claude_sdk(...):
 - **[[state-driven-composio-workflow]]**: The multi-phase approach this pattern replaces
 - **[[claude-agent-sdk]]**: Full documentation of Claude Agent SDK capabilities
 - **[[composio]]**: Tool integration platform used for Gmail, Calendar, etc.
-- **[[model-context-protocol]]**: Protocol enabling custom tool integration
 - **[[multi-tool-agent]]**: Alternative multi-tool coordination patterns
 
 ## Resources
@@ -1406,7 +1346,7 @@ async def process_email_with_claude_sdk(...):
 **Implementation:**
 - [Claude Agent SDK Docs](https://docs.claude.com/en/api/agent-sdk/overview)
 - [Composio Integration Guide](https://docs.composio.dev/)
-- [MCP In-Process Servers](https://docs.claude.com/en/api/agent-sdk/python#custom-tools)
+- [Anthropic Tool Use Documentation](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
 
 **Examples:**
 - [LinkedIn Code Review Agents](https://www.anthropic.com/customers/linkedin) - Production usage
@@ -1418,8 +1358,8 @@ async def process_email_with_claude_sdk(...):
 ## Changelog
 
 - **2025-10-10**: Initial example created showing Claude Agent SDK + Composio integration for business automation
-  - **Custom tools work just like Composio**: Pass directly via `tools` parameter - no MCP required!
-  - Two options demonstrated: **Direct tool definition** (simpler) and **MCP server** (reusable)
+  - **Custom tools work just like Composio**: Pass directly via `tools` parameter using Anthropic tool format
+  - Direct tool definitions with executor functions for custom business logic
   - Claude's native analysis handles data extraction from threads
   - Fully relies on Composio's 250+ authenticated tools for integrations
   - Demonstrates hooks, subagents, parallel processing, and tool whitelisting
