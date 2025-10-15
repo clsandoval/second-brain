@@ -1,0 +1,460 @@
+@use "../../styles/variables.scss" as *;
+
+.annotator-container {
+  // Floating annotation button (appears on text selection)
+  .annotation-button {
+    position: fixed;
+    z-index: 998;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--secondary);
+    color: var(--light);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  // Annotation modal overlay
+  .annotation-modal-container {
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    display: none;
+    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.3);
+    align-items: center;
+    justify-content: center;
+
+    &.active {
+      display: flex;
+    }
+
+    .annotation-modal {
+      background: var(--light);
+      border-radius: 8px;
+      box-shadow: 0 14px 50px rgba(27, 33, 48, 0.12), 0 10px 30px rgba(27, 33, 48, 0.16);
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+
+      .annotation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--lightgray);
+
+        h3 {
+          margin: 0;
+          font-size: 1.25rem;
+          color: var(--dark);
+        }
+
+        .annotation-close {
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 0.25rem;
+          display: flex;
+          align-items: center;
+          color: var(--gray);
+          transition: color 0.2s ease;
+
+          &:hover {
+            color: var(--dark);
+          }
+        }
+      }
+
+      .annotation-content {
+        padding: 1.5rem;
+        overflow-y: auto;
+        flex: 1;
+
+        .selected-text-preview {
+          margin-bottom: 1.5rem;
+
+          label {
+            display: block;
+            font-weight: $boldWeight;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+          }
+
+          .preview-text {
+            background: var(--lightgray);
+            border-left: 4px solid var(--secondary);
+            padding: 0.75rem 1rem;
+            margin: 0;
+            font-style: italic;
+            color: var(--gray);
+            border-radius: 4px;
+          }
+        }
+
+        .annotation-input {
+          label {
+            display: block;
+            font-weight: $boldWeight;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+          }
+
+          .annotation-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            font-family: var(--bodyFont);
+            font-size: 1rem;
+            color: var(--dark);
+            background: var(--light);
+            border: 1px solid var(--lightgray);
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 120px;
+            box-sizing: border-box;
+
+            &:focus {
+              outline: none;
+              border-color: var(--secondary);
+            }
+
+            &::placeholder {
+              color: var(--gray);
+            }
+          }
+        }
+      }
+
+      .annotation-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--lightgray);
+
+        button {
+          padding: 0.5rem 1.25rem;
+          border-radius: 4px;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: none;
+          font-weight: $boldWeight;
+        }
+
+        .annotation-cancel {
+          background: transparent;
+          color: var(--gray);
+          border: 1px solid var(--lightgray);
+
+          &:hover {
+            background: var(--lightgray);
+            color: var(--dark);
+          }
+        }
+
+        .annotation-save {
+          background: var(--secondary);
+          color: var(--light);
+
+          &:hover {
+            opacity: 0.9;
+          }
+        }
+      }
+    }
+  }
+
+  // Floating toggle button
+  .annotation-toggle {
+    position: fixed;
+    right: 2rem;
+    bottom: 2rem;
+    z-index: 997;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--tertiary);
+    color: var(--light);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .annotation-count {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: var(--secondary);
+      color: var(--light);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: $boldWeight;
+    }
+
+    @media all and ($mobile) {
+      right: 1rem;
+      bottom: 1rem;
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  // Annotation sidebar
+  .annotation-sidebar {
+    position: fixed;
+    right: -400px; // Hidden by default
+    top: 0;
+    width: 400px;
+    height: 100vh;
+    background: var(--light);
+    border-left: 1px solid var(--lightgray);
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    z-index: 998;
+    transition: right 0.3s ease;
+
+    &.open {
+      right: 0;
+    }
+
+    @media all and ($mobile) {
+      width: 100vw;
+      right: -100vw;
+    }
+
+    .annotation-sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--lightgray);
+
+      h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--dark);
+      }
+
+      .annotation-sidebar-close {
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--gray);
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: var(--dark);
+        }
+      }
+    }
+
+    .annotation-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+
+      .annotation-empty {
+        text-align: center;
+        color: var(--gray);
+        padding: 2rem 1rem;
+
+        p {
+          margin: 0.5rem 0;
+        }
+      }
+
+      .annotation-item {
+        background: var(--lightgray);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--darkgray);
+          transform: translateX(-4px);
+        }
+
+        .annotation-item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5rem;
+
+          .annotation-date {
+            font-size: 0.85rem;
+            color: var(--gray);
+          }
+
+          .annotation-actions {
+            display: flex;
+            gap: 0.5rem;
+
+            button {
+              background: transparent;
+              border: none;
+              cursor: pointer;
+              padding: 0.25rem;
+              color: var(--gray);
+              transition: color 0.2s ease;
+
+              &:hover {
+                color: var(--dark);
+              }
+
+              &.annotation-delete:hover {
+                color: #f44336;
+              }
+            }
+          }
+        }
+
+        .annotation-text {
+          font-size: 0.9rem;
+          font-style: italic;
+          color: var(--gray);
+          margin: 0.5rem 0;
+          padding: 0.5rem;
+          background: var(--light);
+          border-left: 3px solid var(--secondary);
+          border-radius: 4px;
+        }
+
+        .annotation-note {
+          font-size: 0.95rem;
+          color: var(--dark);
+          margin: 0.5rem 0 0 0;
+          line-height: 1.5;
+        }
+      }
+    }
+
+    .annotation-sidebar-footer {
+      display: flex;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--lightgray);
+
+      button {
+        flex: 1;
+        padding: 0.625rem 1rem;
+        border-radius: 4px;
+        border: 1px solid var(--lightgray);
+        background: transparent;
+        color: var(--dark);
+        cursor: pointer;
+        font-weight: $boldWeight;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--lightgray);
+        }
+
+        &.annotation-clear-all:hover {
+          background: #f44336;
+          color: white;
+          border-color: #f44336;
+        }
+      }
+    }
+  }
+}
+
+// Highlighted text styles
+mark.annotation-highlight {
+  background: rgba(255, 235, 59, 0.4); // Light yellow highlight
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 235, 59, 0.6);
+  }
+
+  // Dark mode support
+  @media (prefers-color-scheme: dark) {
+    background: rgba(255, 193, 7, 0.3);
+
+    &:hover {
+      background: rgba(255, 193, 7, 0.5);
+    }
+  }
+}
+
+// Alternative highlight colors (can be used for different annotation types in future)
+.annotation-highlight {
+  &.highlight-blue {
+    background: rgba(33, 150, 243, 0.3);
+    &:hover {
+      background: rgba(33, 150, 243, 0.5);
+    }
+  }
+
+  &.highlight-green {
+    background: rgba(76, 175, 80, 0.3);
+    &:hover {
+      background: rgba(76, 175, 80, 0.5);
+    }
+  }
+
+  &.highlight-pink {
+    background: rgba(233, 30, 99, 0.3);
+    &:hover {
+      background: rgba(233, 30, 99, 0.5);
+    }
+  }
+}
+
+// Flash animation for scrolling to annotation
+@keyframes annotation-flash {
+  0%, 100% {
+    background: rgba(255, 235, 59, 0.4);
+  }
+  50% {
+    background: rgba(255, 193, 7, 0.8);
+  }
+}
+
+mark.annotation-highlight.annotation-flash {
+  animation: annotation-flash 1.5s ease;
+}
